@@ -1,11 +1,11 @@
-# entryPoints:
-#   web:
-#     address: ":80"
-#
-# api:
-#  insecure: true # Habilita el dashboard en :8080
-#  dashboard: true
-#
-# providers:
-#  docker:
-#    exposedByDefault: false
+entryPoints:
+  web:
+    address: ":80"
+
+api:
+ insecure: true # Habilita el dashboard en :8080
+ dashboard: true
+
+providers:
+ docker:
+   exposedByDefault: false

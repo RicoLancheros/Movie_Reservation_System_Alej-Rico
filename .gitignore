@@ -1,0 +1,52 @@
+# .gitignore para Spring Boot + Docker + Traefik 
+
+# --- Gradle ---
+.gradle/
+build/
+out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- VSCode ---
+.vscode/
+.settings/
+
+# --- Archivos generados por el proyecto ---
+/logs/
+/tmp/
+*.log
+*.swp
+*.swo
+
+# --- Spring Boot ---
+application.properties  # (¡Solo si contiene secrets!)
+application-dev.properties
+application-prod.properties
+
+# --- Docker / Traefik ---
+docker-compose.override.yml  # (Puede contener configs locales)
+.env                        # (Variables sensibles)
+traefik/logs/               # (Logs de Traefik)
+
+# --- Base de datos ---
+# MongoDB
+/data/db/
+*.ns
+*.0
+*.lock
+
+# MySQL
+*.myd
+*.myi
+*.sock
+
+# --- Otros ---
+.DS_Store                  # (macOS)
+*.class                   # (Archivos compilados de Java)
+!**/src/main/**/*.class   # (Excepción para clases en src/main)
