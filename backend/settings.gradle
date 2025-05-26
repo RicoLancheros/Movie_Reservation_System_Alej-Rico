@@ -1,0 +1,6 @@
+rootProject.name = 'movie-reservation-backend'
+
+include 'Microservicios:user-service'
+include 'Microservicios:movie-service'
+include 'Microservicios:showtime-service'
+include 'Microservicios:reservation-service'

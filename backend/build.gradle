@@ -1,0 +1,22 @@
+// Este es el build.gradle del proyecto raíz del backend
+
+plugins {
+}
+
+allprojects {
+    group = 'com.alejrico.moviesystem' // Define un group ID común
+}
+
+subprojects {
+    apply plugin: 'java' // Asegura que todos los submódulos son proyectos Java
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+}
