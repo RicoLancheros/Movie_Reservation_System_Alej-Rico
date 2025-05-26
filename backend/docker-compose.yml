@@ -1,0 +1,86 @@
+services:
+  ########################MySQL para User Service########################
+  mysql-user-db:
+    image: mysql:8.0
+    container_name: mysql-user-db
+    ports:
+      - "3307:3306" # Puerto externo 3307 mapeado al interno 3306 del contenedor
+    environment:
+      MYSQL_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
+      MYSQL_DATABASE: user_service_db
+    volumes:
+      - user_db_data:/var/lib/mysql
+    networks:
+      - movie_network
+
+  ########################MySQL para Movie Service########################
+  mysql-movie-db:
+    image: mysql:8.0
+    container_name: mysql-movie-db
+    ports:
+      - "3308:3306" # Puerto externo 3308 mapeado al interno 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
+      MYSQL_DATABASE: movie_service_db
+    volumes:
+      - movie_db_data:/var/lib/mysql
+    networks:
+      - movie_network
+
+  ########################MongoDB para Showtime Service########################
+  mongo-showtime-db:
+    image: mongo:latest
+    container_name: mongo-showtime-db
+    ports:
+      - "27018:27017" # Puerto externo 27018 mapeado al interno 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root #USER
+      MONGO_INITDB_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
+    volumes:
+      - showtime_db_data:/data/db
+    networks:
+      - movie_network
+
+  ########################MongoDB para Reservation Service########################
+  mongo-reservation-db:
+    image: mongo:latest
+    container_name: mongo-reservation-db
+    ports:
+      - "27019:27017" # Puerto externo 27019 mapeado al interno 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root #USER
+      MONGO_INITDB_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
+
+    volumes:
+      - reservation_db_data:/data/db
+    networks:
+      - movie_network
+
+  ########################Traefik API Gateway########################
+  traefik:
+    image: traefik:v2.10 # Usa una versión específica
+    container_name: traefik-gateway
+    command:
+      - "--api.insecure=true" # Habilita el dashboard de Traefik (para desarrollo)
+      - "--providers.docker=true" # Habilita Docker como proveedor de configuración
+      - "--providers.docker.exposedbydefault=false" # No exponer servicios por defecto
+      - "--entrypoints.web.address=:80" # Punto de entrada HTTP en el puerto 80
+
+    ports:
+      - "80:80"     # Puerto para el tráfico HTTP
+      - "8080:8080" # Puerto para el Dashboard de Traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+    networks:
+      - movie_network
+
+volumes:
+  user_db_data:
+  movie_db_data:
+  showtime_db_data:
+  reservation_db_data:
+
+networks:
+  movie_network:
+    driver: bridge
