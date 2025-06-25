@@ -1,10 +1,10 @@
 # Movie Reservation System - CineReserva 🎬
 
-**Versión Actual: V0.0.3 - Sistema de Reservas Frontend Completo**
+**Versión Actual: V0.0.4 - Integración Backend-Frontend Completa**
 
-Sistema integral de gestión de reservas de películas desarrollado con arquitectura de microservicios. Incluye backend en Spring Boot y frontend moderno en React con TypeScript.
+Sistema integral de gestión de reservas de películas con arquitectura de microservicios completamente funcional. Backend en Spring Boot integrado con frontend moderno en React TypeScript.
 
-[![Version](https://img.shields.io/badge/version-0.0.3-blue.svg)](https://github.com/tu-usuario/movie-reservation-system)
+[![Version](https://img.shields.io/badge/version-0.0.4-blue.svg)](https://github.com/tu-usuario/movie-reservation-system)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.0+-6DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -16,47 +16,55 @@ Sistema integral de gestión de reservas de películas desarrollado con arquitec
 - [Instalación](#-instalación)
 - [Manual de Usuario](#-manual-de-usuario)
 - [Arquitectura del Sistema](#-arquitectura-del-sistema)
+- [APIs del Backend](#-apis-del-backend)
 - [Versionado](#-historial-de-versiones)
 - [Contribuir](#-contribuir)
 
 ## ✨ Características
 
-### Frontend React
-- 🎬 **Catálogo de Películas** - Navegación intuitiva con filtros avanzados
-- 🛡️ **Sistema de Autenticación** - Login seguro con roles de usuario y administrador
-- 🪑 **Selección de Asientos Interactiva** - Mapa visual de sala de cine
-- 💳 **Proceso de Pago Simulado** - Formulario completo con validaciones
-- 📱 **Diseño Responsivo** - Optimizado para móviles y desktop
-- ⚡ **Interfaz Moderna** - UI/UX con Tailwind CSS
-- 🔄 **Gestión de Estado** - Zustand para estado global
-- 💾 **Persistencia Local** - LocalStorage para datos temporales
+### 🔗 Integración Completa Backend-Frontend
+- 🎭 **Panel Admin Funcional** - CRUD completo de películas conectado al backend
+- 🎬 **Catálogo Real** - Datos cargados desde APIs de microservicios
+- 🕐 **Horarios Dinámicos** - Showtime Service genera funciones automáticamente
+- 🗄️ **Persistencia Real** - Datos almacenados en MongoDB y MySQL
+- 🔄 **Estados de Carga** - UX mejorada con loading y manejo de errores
 
-### Backend Microservicios
-- 🏗️ **Arquitectura de Microservicios** - Servicios independientes y escalables
-- 🔐 **Spring Security** - Autenticación y autorización robusta
-- 🗄️ **Bases de Datos Múltiples** - MySQL y MongoDB
-- 🐳 **Dockerización** - Contenedores para fácil despliegue
-- 🚪 **API Gateway** - Traefik como proxy reverso
+### Frontend React Actualizado
+- 🎬 **Catálogo de Películas** - Conectado a Movie Service (puerto 8082)
+- 🛡️ **Sistema de Autenticación** - Login seguro con roles
+- 🪑 **Selección de Asientos Interactiva** - Mapa visual de sala
+- 💳 **Proceso de Pago Simulado** - Formulario completo
+- 📱 **Diseño Responsivo** - Optimizado para móviles y desktop
+- 🔄 **Gestión de Estado** - Zustand integrado con APIs
+- 🎯 **Navegación Funcional** - MovieDetailPage conectado al backend
+
+### Backend Microservicios Completo
+- 🎭 **Movie Service** - Gestión completa de películas con MongoDB
+- 🕐 **Showtime Service** - Horarios dinámicos con IDs reales
+- 🎫 **Reservation Service** - Sistema de reservas funcional
+- 👤 **User Service** - Autenticación y usuarios
+- 🚪 **API Gateway** - Traefik configurado
+- 🐳 **Infraestructura** - Docker Compose completo
 
 ## 🛠 Tecnologías
 
 ### Frontend
 - **React 18** - Biblioteca de UI moderna
-- **TypeScript** - Tipado estático para mejor desarrollo
-- **Tailwind CSS** - Framework de CSS utilitario
-- **Zustand** - Gestión de estado minimalista
+- **TypeScript** - Tipado estático
+- **Tailwind CSS** - Framework CSS utilitario
+- **Zustand** - Gestión de estado conectada a APIs
 - **React Router** - Navegación SPA
 - **Lucide React** - Iconografía moderna
 - **Vite** - Build tool ultrarrápido
 
 ### Backend
-- **Spring Boot 3.0+** - Framework de aplicaciones Java
-- **Spring Security** - Seguridad y autenticación
-- **Spring Data JPA** - Abstracción de base de datos
-- **MySQL** - Base de datos relacional
-- **MongoDB** - Base de datos NoSQL
-- **Docker** - Contenedorización
-- **Traefik** - Proxy reverso y load balancer
+- **Spring Boot 3.0+** - Framework Java
+- **Spring Data MongoDB** - Base NoSQL para películas
+- **Spring Data JPA** - Base relacional para usuarios
+- **MySQL 8.0** - Base de datos de usuarios
+- **MongoDB** - Base de datos de películas y horarios
+- **Docker Compose** - Orquestación de contenedores
+- **Traefik v2.10** - Proxy reverso y load balancer
 
 ## 📥 Instalación
 
@@ -72,16 +80,52 @@ git clone https://github.com/tu-usuario/movie-reservation-system.git
 cd movie-reservation-system
 ```
 
-### 2. Configurar Backend
+### 2. Configurar Backend (Microservicios)
 ```bash
-# Iniciar servicios con Docker
+cd backend
+
+# Iniciar bases de datos con Docker
 docker-compose up -d
 
 # Verificar que los servicios estén corriendo
 docker-compose ps
+
+# Construir todos los microservicios
+cd Microservicios/movie-service
+./gradlew clean build -x test
+
+cd ../showtime-service  
+./gradlew clean build -x test
+
+cd ../reservation-service
+./gradlew clean build -x test
+
+cd ../user-service
+./gradlew clean build -x test
 ```
 
-### 3. Configurar Frontend
+### 3. Ejecutar Microservicios
+```bash
+# En terminales separadas, ejecutar cada servicio:
+
+# Terminal 1 - Movie Service (Puerto 8082)
+cd backend/Microservicios/movie-service
+./gradlew bootRun
+
+# Terminal 2 - Showtime Service (Puerto 8083)
+cd backend/Microservicios/showtime-service
+./gradlew bootRun
+
+# Terminal 3 - Reservation Service (Puerto 8084)
+cd backend/Microservicios/reservation-service
+./gradlew bootRun
+
+# Terminal 4 - User Service (Puerto 8081)
+cd backend/Microservicios/user-service
+./gradlew bootRun
+```
+
+### 4. Configurar Frontend
 ```bash
 cd frontend/movie-reservation-app
 
@@ -92,194 +136,170 @@ npm install
 npm run dev
 ```
 
-### 4. Acceder a la Aplicación
+### 5. Verificar Instalación
 - **Frontend**: http://localhost:5173
-- **Backend**: http://localhost:8080
+- **Movie Service**: http://localhost:8082/api/movies
+- **Showtime Service**: http://localhost:8083/api/showtimes
+- **Traefik Dashboard**: http://localhost:8080
 
 ## 📖 Manual de Usuario
 
 ### 🚪 Acceso al Sistema
 
-La aplicación cuenta con dos tipos de usuarios predefinidos:
-
 #### 👨‍💼 Usuario Administrador
 - **Usuario**: `admin`
 - **Contraseña**: `password123`
-- **Permisos**: Gestión completa de películas, visualización de reservas
+- **Funcionalidades**:
+  - ✅ **Panel de Administración** - Gestión CRUD de películas
+  - ✅ **Crear Películas** - Envía datos al Movie Service
+  - ✅ **Editar Películas** - Actualiza en base de datos MongoDB
+  - ✅ **Eliminar Películas** - Eliminación desde backend
 
 #### 👤 Usuario Regular
 - **Usuario**: `user`
 - **Contraseña**: `password123`
-- **Permisos**: Navegación, reserva de asientos
+- **Funcionalidades**:
+  - ✅ **Explorar Catálogo** - Películas reales desde Movie Service
+  - ✅ **Ver Detalles** - Información completa + horarios reales
+  - ✅ **Reservar Asientos** - Sistema completo de reservas
 
-### 🎬 Gestión de Películas (Solo Administradores)
+### 🎬 Panel de Administración (CRUD Completo)
 
-#### Agregar Nueva Película
-1. Inicia sesión como administrador
-2. Ve al **Panel de Administración** desde el menú
-3. Haz clic en **"Agregar Película"**
-4. Completa el formulario:
-   - **Título**: Nombre de la película
-   - **Descripción**: Sinopsis detallada
-   - **Género**: Selecciona de la lista predefinida
-   - **Duración**: En minutos
-   - **Rating**: Clasificación (G, PG, PG-13, R, NC-17)
-   - **Director**: Nombre del director
-   - **Reparto**: Actores separados por comas
-   - **URL del Póster**: Enlace a imagen (opcional)
-5. Haz clic en **"Crear Película"**
+#### ✨ Nueva Funcionalidad: Gestión Real de Películas
 
-#### Editar Película Existente
-1. En el Panel de Administración, localiza la película
-2. Haz clic en el icono **✏️ Editar**
-3. Modifica los campos necesarios
-4. Haz clic en **"Actualizar Película"**
+El Panel de Administración ahora está **completamente conectado al backend**:
 
-#### Eliminar Película
-1. En el Panel de Administración, localiza la película
-2. Haz clic en el icono **🗑️ Eliminar**
-3. Confirma la eliminación
+1. **Acceso**: Login como admin → Panel de Administración
+2. **Vista**: Tabla con todas las películas desde MongoDB
+3. **Funciones Disponibles**:
 
-### 🎫 Proceso de Reserva (Usuarios Autenticados)
+   **🆕 Crear Película Nueva**:
+   - Formulario completo con validaciones
+   - Envío directo al Movie Service (POST /api/movies)
+   - Actualización automática de la tabla
 
-#### Paso 1: Explorar Catálogo
-1. Navega por la página principal
-2. Usa los **filtros por género** o la **barra de búsqueda**
-3. Haz clic en **"Ver Detalles"** de la película deseada
+   **✏️ Editar Película Existente**:
+   - Carga datos reales desde backend
+   - Actualización via PUT /api/movies/{id}
+   - Cambios reflejados inmediatamente
 
-#### Paso 2: Seleccionar Horario
-1. En la página de detalles, revisa la información de la película
-2. Selecciona una **fecha** (disponible hasta 7 días adelante)
-3. Elige un **horario** de los disponibles
-4. Observa el precio y disponibilidad de asientos
-5. Haz clic en **"Seleccionar Asientos"**
+   **🗑️ Eliminar Película**:
+   - Confirmación de seguridad
+   - Eliminación via DELETE /api/movies/{id}
+   - Actualización automática del catálogo
 
-> **💡 Precios Dinámicos**: Los precios varían según:
-> - **Día de semana** vs **fin de semana** (+$3.000)
-> - **Horarios prime** (20:00, 22:30) (+$2.000)
+### 🎭 Exploración de Películas (Datos Reales)
 
-#### Paso 3: Elegir Asientos
-1. Visualiza el **mapa de la sala** con la pantalla al frente
-2. Haz clic en los asientos disponibles (verdes)
-3. Los asientos seleccionados se marcan en azul
-4. Revisa el **resumen de reserva** en el panel lateral
-5. Haz clic en **"Continuar al Pago"**
+#### Catálogo Principal
+- **10 Películas Reales** cargadas desde Movie Service
+- **Datos Completos**: Títulos, descripciones, imágenes, reparto
+- **Filtros Funcionales**: Por género y búsqueda de título
+- **Performance**: Loading states y manejo de errores
 
-> **🎯 Tipos de Asientos**:
-> - 🟢 **Verde**: Disponible
-> - 🔴 **Rojo**: Ocupado
-> - 🔵 **Azul**: Seleccionado
-> - 🟣 **Morado**: Accesible (para personas con discapacidad)
+#### Página de Detalles
+- **Información Completa**: Director, fecha de estreno, reparto
+- **Horarios Reales**: Conectados al Showtime Service
+- **Navegación Funcional**: Ya no muestra "película no encontrada"
+- **Integración**: Datos sincronizados entre microservicios
 
-#### Paso 4: Realizar Pago
-1. Completa la **información personal**:
-   - Nombre completo
-   - Email (para recibir confirmación)
-   - Teléfono de contacto
+## 🔌 APIs del Backend
 
-2. Ingresa los **datos de la tarjeta**:
-   - Número de tarjeta (16 dígitos)
-   - Fecha de expiración (MM/AA)
-   - Código CVV (3-4 dígitos)
+### Movie Service (Puerto 8082)
+```bash
+GET    /api/movies                 # Todas las películas
+GET    /api/movies/{id}            # Película por ID
+GET    /api/movies/search?genre=   # Filtrar por género
+GET    /api/movies/search?title=   # Buscar por título
+POST   /api/movies                 # Crear película
+PUT    /api/movies/{id}            # Actualizar película
+DELETE /api/movies/{id}            # Eliminar película
+```
 
-3. Revisa el **resumen de compra**
-4. Haz clic en **"Completar Pago"**
+### Showtime Service (Puerto 8083)
+```bash
+GET    /api/showtimes                    # Todos los horarios
+GET    /api/showtimes/movie/{movieId}    # Horarios por película
+GET    /api/showtimes/date/{date}        # Horarios por fecha
+POST   /api/showtimes                    # Crear horario
+PUT    /api/showtimes/{id}/reserve-seats # Reservar asientos
+```
 
-> **🔒 Seguridad**: Todos los datos están protegidos y el pago es simulado
-
-#### Paso 5: Confirmación
-1. Espera el procesamiento (3 segundos)
-2. Recibe tu **ticket digital**
-3. Guarda o imprime la confirmación
-
-### 🔍 Navegación y Filtros
-
-#### Búsqueda de Películas
-- **Búsqueda por título**: Escribe en la barra de búsqueda
-- **Filtro por género**: Haz clic en los botones de género
-- **Limpiar filtros**: Botón para mostrar todas las películas
-
-#### Estados de Disponibilidad
-- 🟢 **Disponible**: Más del 50% de asientos libres
-- 🟡 **Pocas entradas**: 20-50% de asientos libres
-- 🔴 **Últimas entradas**: Menos del 20% de asientos libres
-
-### ⚠️ Limitaciones y Consideraciones
-
-- **Máximo 8 asientos** por reserva
-- **Tiempo límite**: 15 minutos para completar la reserva
-- **Horarios**: Generados dinámicamente para 7 días
-- **Persistencia**: Los datos se almacenan localmente (no permanentes)
-- **Pagos**: Simulados para propósitos de demostración
+### Reservation Service (Puerto 8084)
+```bash
+GET    /api/reservations           # Todas las reservas
+POST   /api/reservations           # Crear reserva
+GET    /api/reservations/user/{id} # Reservas por usuario
+```
 
 ## 🏗 Arquitectura del Sistema
 
 ### Microservicios Backend
 ```
 backend/
-├── user-service/          # Gestión de usuarios y autenticación
-├── movie-service/         # Catálogo de películas
-├── showtime-service/      # Horarios y funciones
-├── reservation-service/   # Reservas y asientos
-└── traefik/              # API Gateway
+├── movie-service/         # MongoDB (Puerto 27018) - Gestión de películas
+├── showtime-service/      # MongoDB (Puerto 27019) - Horarios y salas  
+├── reservation-service/   # MongoDB (Puerto 27020) - Reservas
+├── user-service/          # MySQL (Puerto 3306) - Usuarios y autenticación
+└── traefik/              # API Gateway (Puerto 8080)
 ```
 
-### Estructura Frontend
+### Integración Frontend-Backend
 ```
-frontend/movie-reservation-app/
-├── src/
-│   ├── components/        # Componentes reutilizables
-│   ├── pages/            # Páginas de la aplicación
-│   ├── store/            # Gestión de estado (Zustand)
-│   ├── types/            # Definiciones de TypeScript
-│   └── utils/            # Utilidades
-└── public/               # Archivos estáticos
+Frontend (React)
+    ↓ HTTP Calls
+Movie Store (Zustand)
+    ↓ fetch()
+Movie Service API
+    ↓ MongoDB
+Películas Persistentes
 ```
 
 ## 📚 Historial de Versiones
 
-### V0.0.3 - Sistema de Reservas Frontend Completo ✨
+### 🆕 V0.0.4 - Integración Backend-Frontend Completa
+**Fecha**: Junio 2025
+- ✅ **Panel Admin Conectado**: CRUD completo de películas con backend
+- ✅ **Navegación Funcional**: MovieDetailPage conectado a APIs
+- ✅ **Datos Reales**: HomePage carga desde Movie Service
+- ✅ **Horarios Dinámicos**: Showtime Service con IDs reales de películas
+- ✅ **Selector de Asientos Fijo**: Asientos se marcan en azul correctamente
+- ✅ **Estados de Carga**: Loading states y manejo de errores
+- ✅ **Limpieza de Código**: Eliminado localStorage del admin y navegación
+- ✅ **Sincronización**: IDs de películas conectados entre microservicios
+
+### V0.0.3 - Sistema de Reservas Frontend Completo
 **Fecha**: Diciembre 2024
 - ✅ Frontend React completo con TypeScript
 - ✅ Sistema de autenticación con roles
-- ✅ Panel de administración para gestión de películas
-- ✅ Catálogo con filtros y búsqueda
 - ✅ Selección de asientos interactiva
 - ✅ Proceso de pago simulado
-- ✅ Horarios dinámicos con precios variables
 - ✅ Diseño responsivo con Tailwind CSS
 
 ### V0.0.2 - Configuración Backend y Base de Datos
 **Fecha**: Noviembre 2024
 - ✅ Configuración de bases de datos MySQL y MongoDB
-- ✅ Entidades User y Role definidas
-- ✅ Repositorios JPA implementados
-- ✅ UserService y UserController
+- ✅ Microservicios Spring Boot
 - ✅ Spring Security básico
-- ✅ Modularización de microservicios
 
 ### V0.0.1 - Estructura Base del Proyecto
 **Fecha**: Octubre 2024
 - ✅ Estructura inicial del proyecto
 - ✅ Configuración Docker Compose
-- ✅ Servicios Spring Boot creados
-- ✅ Configuración Traefik
-- ✅ Bases de datos containerizadas
 
 ## 🚀 Próximas Funcionalidades
 
-- 📧 **Sistema de Notificaciones** - Emails de confirmación
-- 👤 **Perfil de Usuario** - Historial de reservas
-- 📊 **Dashboard de Reportes** - Analytics para administradores
-- 🔗 **Integración Backend-Frontend** - API REST completa
-- 💾 **Base de Datos Persistente** - Migración desde localStorage
-- 🎯 **Sistema de Descuentos** - Promociones y códigos
+- 🔐 **Autenticación Backend**: Conectar login con User Service
+- 🎫 **Reservas Funcionales**: Integrar Reservation Service
+- 📧 **Sistema de Notificaciones**: Emails de confirmación
+- 👤 **Perfil de Usuario**: Historial de reservas
+- 📊 **Dashboard de Reportes**: Analytics para administradores
+- 🎯 **Sistema de Descuentos**: Promociones y códigos
 
 ## 🤝 Contribuir
 
 1. Fork el proyecto
 2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
+3. Commit tus cambios (`git commit -m 'V0.0.X - Descripción del cambio'`)
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
 5. Abre un Pull Request
 

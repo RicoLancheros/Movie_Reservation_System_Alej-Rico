@@ -40,12 +40,11 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
       const queryParams = new URLSearchParams();
       
       if (filters.genre) queryParams.append('genre', filters.genre);
-      if (filters.search) queryParams.append('search', filters.search);
-      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+      if (filters.search) queryParams.append('title', filters.search);
 
-      // Mock API call - replace with actual API
-      const response = await fetch(`/api/movies?${queryParams}`);
+      // Llamada real al movie-service
+      const url = `http://localhost:8082/api/movies/search?${queryParams}`;
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch movies');
@@ -64,7 +63,7 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   fetchMovieById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`/api/movies/${id}`);
+      const response = await fetch(`http://localhost:8082/api/movies/${id}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch movie');
@@ -83,10 +82,12 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   fetchShowtimes: async (movieId: string, date?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const queryParams = new URLSearchParams({ movieId });
-      if (date) queryParams.append('date', date);
+      let url = `http://localhost:8083/api/showtimes/movie/${movieId}`;
+      if (date) {
+        url += `/date/${date}`;
+      }
 
-      const response = await fetch(`/api/showtimes?${queryParams}`);
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch showtimes');

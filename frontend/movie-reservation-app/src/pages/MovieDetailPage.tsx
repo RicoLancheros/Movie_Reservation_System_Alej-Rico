@@ -4,87 +4,28 @@ import { Clock, Users, ArrowLeft } from 'lucide-react';
 import type { Movie, Showtime } from '../types';
 import { Button } from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
-
-// Función para obtener películas del localStorage
-const getMoviesFromStorage = (): Movie[] => {
-  const stored = localStorage.getItem('movies');
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  return [];
-};
-
-// Función para generar horarios dinámicos
-const generateShowtimes = (movieId: string): Showtime[] => {
-  const today = new Date();
-  const showtimes: Showtime[] = [];
-  
-  // Generar horarios para los próximos 7 días
-  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-    const currentDate = new Date(today);
-    currentDate.setDate(today.getDate() + dayOffset);
-    const dateString = currentDate.toISOString().split('T')[0];
-    
-    // Horarios por día: 14:00, 17:00, 20:00, 22:30
-    const times = ['14:00', '17:00', '20:00', '22:30'];
-    
-    times.forEach((time, timeIndex) => {
-      const id = `${movieId}-${dateString}-${time.replace(':', '')}`;
-      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-      const isPrime = time === '20:00' || time === '22:30';
-      
-      // Precios dinámicos
-      let basePrice = 12000;
-      if (isWeekend) basePrice += 3000;
-      if (isPrime) basePrice += 2000;
-      
-      // Asientos disponibles aleatorios
-      const totalSeats = 100;
-      const availableSeats = Math.floor(Math.random() * 50) + 30; // Entre 30-80 asientos disponibles
-      
-      showtimes.push({
-        id,
-        movieId,
-        date: dateString,
-        time,
-        hallId: `hall${(timeIndex % 3) + 1}`,
-        price: basePrice,
-        availableSeats,
-        totalSeats
-      });
-    });
-  }
-  
-  return showtimes;
-};
+import { useMovieStore } from '../store/movieStore';
 
 export function MovieDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
+  const { selectedMovie, showtimes, isLoading, error, fetchMovieById, fetchShowtimes } = useMovieStore();
   
-  const [movie, setMovie] = useState<Movie | null>(null);
-  const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
 
   useEffect(() => {
     if (id) {
-      // Cargar película desde localStorage
-      const movies = getMoviesFromStorage();
-      const foundMovie = movies.find(m => m.id === id);
-      setMovie(foundMovie || null);
+      // Cargar película del backend
+      fetchMovieById(id);
+      // Cargar horarios del backend
+      fetchShowtimes(id);
       
-      if (foundMovie) {
-        // Generar horarios dinámicos
-        const movieShowtimes = generateShowtimes(id);
-        setShowtimes(movieShowtimes);
-        
-        // Establecer fecha inicial (hoy)
-        const today = new Date().toISOString().split('T')[0];
-        setSelectedDate(today);
-      }
+      // Establecer fecha inicial (hoy)
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
     }
-  }, [id]);
+  }, [id, fetchMovieById, fetchShowtimes]);
 
   const handleShowtimeSelect = (showtime: Showtime) => {
     if (!isAuthenticated) {
@@ -93,7 +34,7 @@ export function MovieDetailPage() {
     }
     // Guardar información del showtime en localStorage para la página de asientos
     localStorage.setItem('selectedShowtime', JSON.stringify(showtime));
-    localStorage.setItem('selectedMovie', JSON.stringify(movie));
+    localStorage.setItem('selectedMovie', JSON.stringify(selectedMovie));
     navigate(`/seats/${showtime.id}`);
   };
 
@@ -131,14 +72,30 @@ export function MovieDetailPage() {
     return { text: 'Últimas entradas', color: 'text-red-600' };
   };
 
+  // Filtrar showtimes disponibles
   const availableDates = Array.from(new Set(showtimes.map(st => st.date))).sort();
   const filteredShowtimes = showtimes.filter(st => st.date === selectedDate);
 
-  if (!movie) {
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center min-h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando película...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !selectedMovie) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Película no encontrada</p>
+          <p className="text-gray-500 mb-4">
+            {error || "Película no encontrada"}
+          </p>
           <Button 
             variant="ghost" 
             onClick={() => navigate('/')}
@@ -168,8 +125,8 @@ export function MovieDetailPage() {
         {/* Movie Poster */}
         <div className="lg:col-span-1">
           <img
-            src={movie.posterImage}
-            alt={movie.title}
+            src={selectedMovie.posterImage}
+            alt={selectedMovie.title}
             className="w-full rounded-lg shadow-lg"
             onError={(e) => {
               e.currentTarget.src = 'https://via.placeholder.com/400x600?text=No+Image';
@@ -180,99 +137,116 @@ export function MovieDetailPage() {
         {/* Movie Details */}
         <div className="lg:col-span-2">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">{movie.title}</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{selectedMovie.title}</h1>
             
             <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-6">
               <span className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                {movie.duration} min
+                {selectedMovie.duration} min
               </span>
               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                {movie.genre}
+                {selectedMovie.genre}
               </span>
               <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
-                {movie.rating}
+                {selectedMovie.rating}
               </span>
             </div>
 
             <p className="text-gray-700 text-lg leading-relaxed mb-6">
-              {movie.description}
+              {selectedMovie.description}
             </p>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Director</h3>
-                <p className="text-gray-600">{movie.director}</p>
+                <p className="text-gray-600">{selectedMovie.director}</p>
               </div>
+              
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Reparto</h3>
-                <p className="text-gray-600">{movie.cast.slice(0, 3).join(', ')}</p>
+                <h3 className="font-semibold text-gray-900 mb-2">Fecha de Estreno</h3>
+                <p className="text-gray-600">
+                  {new Date(selectedMovie.releaseDate).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
               </div>
+
+              {selectedMovie.cast && selectedMovie.cast.length > 0 && (
+                <div className="md:col-span-2">
+                  <h3 className="font-semibold text-gray-900 mb-2">Reparto</h3>
+                  <p className="text-gray-600">{selectedMovie.cast.join(', ')}</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Showtime Selection */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Seleccionar Horario</h2>
+          {/* Showtimes */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Horarios</h2>
             
-            {/* Date Selection */}
-            <div className="mb-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Fecha</h3>
-              <div className="flex flex-wrap gap-2">
-                {availableDates.map(date => (
-                  <button
-                    key={date}
-                    onClick={() => setSelectedDate(date)}
-                    className={`px-4 py-2 rounded-lg border transition-colors ${
-                      selectedDate === date
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300 hover:bg-blue-50'
-                    }`}
-                  >
-                    {formatDate(date)}
-                  </button>
-                ))}
+            {showtimes.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No hay funciones disponibles para esta película</p>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Date Selector */}
+                {availableDates.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex flex-wrap gap-2">
+                      {availableDates.map(date => (
+                        <Button
+                          key={date}
+                          variant={selectedDate === date ? 'primary' : 'secondary'}
+                          onClick={() => setSelectedDate(date)}
+                          className="text-sm"
+                        >
+                          {formatDate(date)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Showtime Grid */}
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Horarios Disponibles</h3>
-              {filteredShowtimes.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-4">
+                {/* Showtimes Grid */}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredShowtimes.map(showtime => {
                     const availability = getAvailabilityStatus(showtime.availableSeats, showtime.totalSeats);
+                    
                     return (
                       <div
                         key={showtime.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <p className="text-xl font-bold text-gray-900">{showtime.time}</p>
+                            <p className="text-lg font-semibold text-gray-900">{showtime.time}</p>
                             <p className="text-sm text-gray-500">Sala {showtime.hallId.replace('hall', '')}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-semibold text-blue-600">
+                            <p className="text-lg font-bold text-blue-600">
                               {formatPrice(showtime.price)}
                             </p>
                           </div>
                         </div>
                         
                         <div className="flex items-center justify-between mb-4">
-                          <span className={`text-sm font-medium ${availability.color}`}>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Users className="h-4 w-4" />
+                            <span>{showtime.availableSeats} disponibles</span>
+                          </div>
+                          <span className={`text-xs font-medium ${availability.color}`}>
                             {availability.text}
                           </span>
-                          <span className="text-sm text-gray-500 flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {showtime.availableSeats}/{showtime.totalSeats}
-                          </span>
                         </div>
-
+                        
                         <Button
                           onClick={() => handleShowtimeSelect(showtime)}
-                          className="w-full"
                           disabled={showtime.availableSeats === 0}
+                          className="w-full"
+                          variant={showtime.availableSeats === 0 ? 'secondary' : 'primary'}
                         >
                           {showtime.availableSeats === 0 ? 'Agotado' : 'Seleccionar Asientos'}
                         </Button>
@@ -280,12 +254,14 @@ export function MovieDetailPage() {
                     );
                   })}
                 </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">
-                  No hay horarios disponibles para esta fecha
-                </p>
-              )}
-            </div>
+
+                {filteredShowtimes.length === 0 && selectedDate && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No hay funciones disponibles para la fecha seleccionada</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
