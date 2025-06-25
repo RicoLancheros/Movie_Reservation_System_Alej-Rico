@@ -46,6 +46,16 @@ traefik/logs/               # (Logs de Traefik)
 *.myi
 *.sock
 
+# --- Frontend / Node.js ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.node_repl_history
+*.tgz
+*.tar.gz
+
 # --- Otros ---
 .DS_Store                  # (macOS)
 *.class                   # (Archivos compilados de Java)
