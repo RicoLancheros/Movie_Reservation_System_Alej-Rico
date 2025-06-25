@@ -13,17 +13,17 @@ services:
     networks:
       - movie_network
 
-  ########################MySQL para Movie Service########################
-  mysql-movie-db:
-    image: mysql:8.0
-    container_name: mysql-movie-db
+  ########################MongoDB para Movie Service########################
+  mongo-movie-db:
+    image: mongo:latest
+    container_name: mongo-movie-db
     ports:
-      - "3308:3306" # Puerto externo 3308 mapeado al interno 3306
+      - "27018:27017" # Puerto externo 27018 mapeado al interno 27017
     environment:
-      MYSQL_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
-      MYSQL_DATABASE: movie_service_db
+      MONGO_INITDB_ROOT_USERNAME: root #USER
+      MONGO_INITDB_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
     volumes:
-      - movie_db_data:/var/lib/mysql
+      - movie_db_data:/data/db
     networks:
       - movie_network
 
@@ -32,7 +32,7 @@ services:
     image: mongo:latest
     container_name: mongo-showtime-db
     ports:
-      - "27018:27017" # Puerto externo 27018 mapeado al interno 27017
+      - "27019:27017" # Puerto externo 27019 mapeado al interno 27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: root #USER
       MONGO_INITDB_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
@@ -46,11 +46,10 @@ services:
     image: mongo:latest
     container_name: mongo-reservation-db
     ports:
-      - "27019:27017" # Puerto externo 27019 mapeado al interno 27017
+      - "27020:27017" # Puerto externo 27020 mapeado al interno 27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: root #USER
       MONGO_INITDB_ROOT_PASSWORD: ContraSegura #Contraseña de prueba
-
     volumes:
       - reservation_db_data:/data/db
     networks:
@@ -65,7 +64,6 @@ services:
       - "--providers.docker=true" # Habilita Docker como proveedor de configuración
       - "--providers.docker.exposedbydefault=false" # No exponer servicios por defecto
       - "--entrypoints.web.address=:80" # Punto de entrada HTTP en el puerto 80
-
     ports:
       - "80:80"     # Puerto para el tráfico HTTP
       - "8080:8080" # Puerto para el Dashboard de Traefik

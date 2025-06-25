@@ -9,14 +9,18 @@ interface SeatSelectorProps {
   onSeatDeselect: (seatId: string) => void;
 }
 
-function getSeatClass(status: SeatStatus): string {
-  switch (status) {
+function getSeatClass(seat: Seat, isSelected: boolean): string {
+  // Si el asiento está seleccionado, siempre mostrarlo en azul
+  if (isSelected) {
+    return 'bg-blue-500 hover:bg-blue-600 cursor-pointer';
+  }
+
+  // Si no está seleccionado, usar el estado original
+  switch (seat.status) {
     case 'available':
       return 'bg-green-500 hover:bg-green-600 cursor-pointer';
     case 'occupied':
       return 'bg-red-500 cursor-not-allowed';
-    case 'selected':
-      return 'bg-blue-500 cursor-pointer';
     case 'disabled':
       return 'bg-gray-300 cursor-not-allowed';
     case 'accessible':
@@ -59,24 +63,27 @@ export function SeatSelector({ seats, selectedSeats, onSeatSelect, onSeatDeselec
             
             {/* Seats */}
             <div className="flex gap-1">
-              {row.map((seat) => (
-                <button
-                  key={seat.id}
-                  onClick={() => handleSeatClick(seat)}
-                  className={`
-                    w-8 h-8 rounded-t-lg text-xs font-medium text-white
-                    transition-colors duration-200 relative
-                    ${getSeatClass(seat.status)}
-                  `}
-                  disabled={seat.status === 'occupied' || seat.status === 'disabled'}
-                  title={`Fila ${seat.row}, Asiento ${seat.number} - ${seat.status}`}
-                >
-                  {seat.type === 'accessible' && (
-                    <Accessibility className="w-4 h-4 absolute inset-0 m-auto" />
-                  )}
-                  {seat.type === 'regular' && seat.number}
-                </button>
-              ))}
+              {row.map((seat) => {
+                const isSelected = selectedSeats.some(s => s.id === seat.id);
+                return (
+                  <button
+                    key={seat.id}
+                    onClick={() => handleSeatClick(seat)}
+                    className={`
+                      w-8 h-8 rounded-t-lg text-xs font-medium text-white
+                      transition-colors duration-200 relative
+                      ${getSeatClass(seat, isSelected)}
+                    `}
+                    disabled={seat.status === 'occupied' || seat.status === 'disabled'}
+                    title={`Fila ${seat.row}, Asiento ${seat.number} - ${isSelected ? 'seleccionado' : seat.status}`}
+                  >
+                    {seat.type === 'accessible' && (
+                      <Accessibility className="w-4 h-4 absolute inset-0 m-auto" />
+                    )}
+                    {seat.type === 'regular' && seat.number}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
