@@ -5,12 +5,14 @@ import type { Movie, Showtime } from '../types';
 import { Button } from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useMovieStore } from '../store/movieStore';
+import { useAdminStore } from '../store/adminStore';
 
 export function MovieDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { selectedMovie, showtimes, isLoading, error, fetchMovieById, fetchShowtimes } = useMovieStore();
+  const { halls } = useAdminStore();
   
   const [selectedDate, setSelectedDate] = useState<string>('');
 
@@ -70,6 +72,12 @@ export function MovieDetailPage() {
     if (percentage > 50) return { text: 'Disponible', color: 'text-green-600' };
     if (percentage > 20) return { text: 'Pocas entradas', color: 'text-yellow-600' };
     return { text: 'Últimas entradas', color: 'text-red-600' };
+  };
+
+  const getHallName = (hallId: string, hallName?: string) => {
+    if (hallName) return hallName;
+    const hall = halls.find(h => h.id === hallId);
+    return hall?.name || `Sala ${hallId}`;
   };
 
   // Filtrar showtimes disponibles
@@ -189,6 +197,9 @@ export function MovieDetailPage() {
             {showtimes.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">No hay funciones disponibles para esta película</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Las funciones creadas por el administrador aparecerán aquí
+                </p>
               </div>
             ) : (
               <>
@@ -223,7 +234,7 @@ export function MovieDetailPage() {
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <p className="text-lg font-semibold text-gray-900">{showtime.time}</p>
-                            <p className="text-sm text-gray-500">Sala {showtime.hallId.replace('hall', '')}</p>
+                            <p className="text-sm text-gray-500">{getHallName(showtime.hallId, showtime.hallName)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-bold text-blue-600">
@@ -258,6 +269,9 @@ export function MovieDetailPage() {
                 {filteredShowtimes.length === 0 && selectedDate && (
                   <div className="text-center py-8">
                     <p className="text-gray-500">No hay funciones disponibles para la fecha seleccionada</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      Selecciona otra fecha o espera a que el administrador agregue más funciones
+                    </p>
                   </div>
                 )}
               </>
