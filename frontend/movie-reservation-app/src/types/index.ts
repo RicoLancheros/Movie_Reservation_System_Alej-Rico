@@ -5,7 +5,16 @@ export interface User {
   email: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  birthDate?: string;
+  preferences?: UserPreferences;
   roles: Role[];
+}
+
+export interface UserPreferences {
+  notifications: boolean;
+  language: 'es' | 'en';
+  favoriteGenres: string[];
 }
 
 export interface Role {
@@ -50,12 +59,31 @@ export interface Movie {
 export interface Showtime {
   id: string;
   movieId: string;
+  movieTitle?: string; // Para mostrar en tablas
+  date: string;
+  time: string;
+  hallId: string;
+  hallName?: string; // Para mostrar en tablas
+  price: number;
+  availableSeats: number;
+  totalSeats: number;
+}
+
+// Admin Showtime Form Types
+export interface ShowtimeFormData {
+  movieId: string;
+  date: string;
+  time: string;
+  hallId: string;
+  price: string; // String para formularios, se convierte a number
+}
+
+export interface CreateShowtimeRequest {
+  movieId: string;
   date: string;
   time: string;
   hallId: string;
   price: number;
-  availableSeats: number;
-  totalSeats: number;
 }
 
 // Seat Types
@@ -66,7 +94,8 @@ export interface Seat {
   row: string;
   number: number;
   status: SeatStatus;
-  type: 'regular' | 'accessible';
+  type: 'regular' | 'accessible' | 'vip';
+  price?: number; // Precio específico del asiento
 }
 
 // Hall Types
@@ -75,6 +104,14 @@ export interface Hall {
   name: string;
   seats: Seat[][];
   totalSeats: number;
+  capacity: number; // Para admin
+}
+
+// Simple Hall for admin forms
+export interface HallOption {
+  id: string;
+  name: string;
+  capacity: number;
 }
 
 // Reservation Types
@@ -82,13 +119,11 @@ export interface Reservation {
   id: string;
   userId: string;
   showtimeId: string;
-  movieTitle: string;
-  date: string;
-  time: string;
-  seats: Seat[];
+  seatIds: string[];
   totalPrice: number;
   status: 'confirmed' | 'cancelled';
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateReservationRequest {
@@ -102,12 +137,15 @@ export interface PaymentData {
   expiryDate: string;
   cvv: string;
   cardholderName: string;
-  cardType: 'credit' | 'debit';
+  method: 'credit' | 'debit';
 }
 
 export interface PaymentResponse {
   success: boolean;
   transactionId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
   message: string;
 }
 
@@ -131,4 +169,12 @@ export interface MovieFilters {
   search?: string;
   sortBy?: 'title' | 'releaseDate' | 'rating';
   sortOrder?: 'asc' | 'desc';
+}
+
+// Admin Dashboard Types
+export interface AdminStats {
+  totalMovies: number;
+  totalShowtimes: number;
+  totalReservations: number;
+  totalRevenue: number;
 } 

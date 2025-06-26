@@ -19,6 +19,7 @@ interface MovieActions {
   clearFilters: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  syncShowtimesFromAdmin: (adminShowtimes: Showtime[]) => void;
 }
 
 type MovieStore = MovieState & MovieActions;
@@ -96,9 +97,34 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
       const showtimes: Showtime[] = await response.json();
       set({ showtimes, isLoading: false });
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to fetch showtimes',
-        isLoading: false,
+      // Si el servicio no está disponible, intentar obtener del adminStore
+      console.warn('Showtime service not available, checking admin store...');
+      
+      // Importar dinámicamente para evitar dependencias circulares
+      const { useAdminStore } = await import('./adminStore');
+      const adminState = useAdminStore.getState();
+      
+      // Filtrar funciones por película
+      let filteredShowtimes = adminState.showtimes.filter(st => st.movieId === movieId);
+      
+      // Filtrar por fecha si se especifica
+      if (date) {
+        filteredShowtimes = filteredShowtimes.filter(st => st.date === date);
+      }
+      
+      // Enriquecer con información de película
+      const { movies } = get();
+      const movie = movies.find(m => m.id === movieId);
+      
+      const enrichedShowtimes = filteredShowtimes.map(showtime => ({
+        ...showtime,
+        movieTitle: movie?.title || 'Película desconocida'
+      }));
+      
+      set({ 
+        showtimes: enrichedShowtimes, 
+        isLoading: false, 
+        error: null 
       });
     }
   },
@@ -110,4 +136,9 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   clearFilters: () => set({ filters: {} }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
+  
+  // Nueva función para sincronizar showtime desde admin
+  syncShowtimesFromAdmin: (adminShowtimes) => {
+    set({ showtimes: adminShowtimes });
+  },
 })); 

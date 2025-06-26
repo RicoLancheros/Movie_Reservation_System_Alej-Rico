@@ -21,6 +21,7 @@ interface AuthActions {
   register: (userData: { username: string; email: string; password: string; firstName?: string; lastName?: string }) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  updateUser: (userData: Partial<User>) => Promise<void>;
   setToken: (token: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -38,6 +39,13 @@ const mockUsers = [
     email: 'admin@cinereserva.com',
     firstName: 'Admin',
     lastName: 'User',
+    phone: '+57 300 123 4567',
+    birthDate: '1985-06-15',
+    preferences: {
+      notifications: true,
+      language: 'es' as const,
+      favoriteGenres: ['Acción', 'Ciencia Ficción']
+    },
     roles: [{ id: '1', name: 'ROLE_ADMIN' as const }]
   },
   {
@@ -46,6 +54,13 @@ const mockUsers = [
     email: 'user@example.com',
     firstName: 'Regular',
     lastName: 'User',
+    phone: '+57 300 987 6543',
+    birthDate: '1990-03-22',
+    preferences: {
+      notifications: true,
+      language: 'es' as const,
+      favoriteGenres: ['Comedia', 'Drama']
+    },
     roles: [{ id: '2', name: 'ROLE_USER' as const }]
   }
 ];
@@ -87,6 +102,13 @@ export const useAuthStore = create<AuthStore>()(
               email: `${credentials.username}@example.com`,
               firstName: credentials.username,
               lastName: 'Demo',
+              phone: '+57 300 000 0000',
+              birthDate: '1990-01-01',
+              preferences: {
+                notifications: true,
+                language: 'es' as const,
+                favoriteGenres: []
+              },
               roles: [{ id: '2', name: 'ROLE_USER' as const }]
             };
           }
@@ -139,6 +161,13 @@ export const useAuthStore = create<AuthStore>()(
             email: userData.email,
             firstName: userData.firstName || '',
             lastName: userData.lastName || '',
+            phone: '+57 300 000 0000',
+            birthDate: '',
+            preferences: {
+              notifications: true,
+              language: 'es' as const,
+              favoriteGenres: []
+            },
             roles: [{ id: '2', name: 'ROLE_USER' as const }]
           };
 
@@ -153,6 +182,43 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Registration failed',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      updateUser: async (userData) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const { user } = get();
+          if (!user) {
+            throw new Error('No hay usuario autenticado');
+          }
+
+          // Merge the updated data
+          const updatedUser: User = {
+            ...user,
+            ...userData,
+            preferences: {
+              ...user.preferences,
+              ...userData.preferences
+            }
+          };
+
+          set({
+            user: updatedUser,
+            isLoading: false,
+          });
+
+          console.log('Perfil actualizado exitosamente');
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al actualizar perfil',
             isLoading: false,
           });
           throw error;
