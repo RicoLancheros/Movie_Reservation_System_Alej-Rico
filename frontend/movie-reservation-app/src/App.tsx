@@ -26,7 +26,7 @@ function App() {
             <Route path="/movie/:id" element={<MovieDetailPage />} />
             <Route path="/seats/:showtimeId" element={<SeatSelectionPage />} />
             <Route path="/payment" element={<PaymentPage />} />
-            <Route path="/confirmation/:reservationId" element={<ConfirmationPage />} />
+            <Route path="/confirmation/:transactionId" element={<ConfirmationPage />} />
             
             {/* Protected Routes */}
             {isAuthenticated && (

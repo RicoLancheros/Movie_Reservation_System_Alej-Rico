@@ -124,6 +124,7 @@ export interface Reservation {
   status: 'confirmed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
+  transactionId?: string;
 }
 
 export interface CreateReservationRequest {

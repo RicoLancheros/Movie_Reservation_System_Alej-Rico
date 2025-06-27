@@ -18,6 +18,9 @@ function getSeatClass(seat: Seat, isSelected: boolean): string {
   // Si no está seleccionado, usar el estado original
   switch (seat.status) {
     case 'available':
+      if (seat.type === 'vip') {
+        return 'bg-yellow-500 hover:bg-yellow-600 cursor-pointer';
+      }
       return 'bg-green-500 hover:bg-green-600 cursor-pointer';
     case 'occupied':
       return 'bg-red-500 cursor-not-allowed';
@@ -77,10 +80,11 @@ export function SeatSelector({ seats, selectedSeats, onSeatSelect, onSeatDeselec
                     disabled={seat.status === 'occupied' || seat.status === 'disabled'}
                     title={`Fila ${seat.row}, Asiento ${seat.number} - ${isSelected ? 'seleccionado' : seat.status}`}
                   >
-                    {seat.type === 'accessible' && (
+                    {seat.type === 'accessible' ? (
                       <Accessibility className="w-4 h-4 absolute inset-0 m-auto" />
+                    ) : (
+                      seat.number
                     )}
-                    {seat.type === 'regular' && seat.number}
                   </button>
                 );
               })}
@@ -94,6 +98,10 @@ export function SeatSelector({ seats, selectedSeats, onSeatSelect, onSeatDeselec
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded"></div>
           <span>Disponible</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+          <span>VIP (Filas A-B)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-blue-500 rounded"></div>

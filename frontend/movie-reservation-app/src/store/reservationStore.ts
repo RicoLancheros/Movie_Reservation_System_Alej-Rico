@@ -7,6 +7,7 @@ interface ReservationState {
   seatMap: Seat[][];
   reservations: Reservation[];
   occupiedSeats: { [showtimeId: string]: string[] };
+  lastReservation: Reservation | null;
   isLoading: boolean;
   error: string | null;
   totalPrice: number;
@@ -26,6 +27,7 @@ interface ReservationActions {
   setError: (error: string | null) => void;
   markSeatsAsOccupied: (showtimeId: string, seatIds: string[]) => void;
   initializeMockData: () => void;
+  getReservationByTransactionId: (transactionId: string) => Reservation | null;
 }
 
 type ReservationStore = ReservationState & ReservationActions;
@@ -83,6 +85,7 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
   seatMap: [],
   reservations: [],
   occupiedSeats: {},
+  lastReservation: null,
   isLoading: false,
   error: null,
   totalPrice: 0,
@@ -128,18 +131,36 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
 
   createReservation: async (paymentData) => {
     const { selectedSeats, currentShowtimeId } = get();
+    
+    console.log('🏪 Estado del store en createReservation:', {
+      currentShowtimeId,
+      selectedSeatsCount: selectedSeats.length,
+      selectedSeatIds: selectedSeats.map(s => s.id)
+    });
+    
     set({ isLoading: true, error: null });
     
     try {
       if (!currentShowtimeId || selectedSeats.length === 0) {
+        console.error('❌ Validación fallida en createReservation:', {
+          hasShowtime: !!currentShowtimeId,
+          seatsCount: selectedSeats.length
+        });
         throw new Error('No showtime or seats selected');
       }
 
+      console.log('✅ Validación exitosa, procesando pago...');
       await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const transactionId = `TXN-${Date.now()}`;
+      const reservationId = `RES-${Date.now()}`;
+      
+      const authStore = JSON.parse(localStorage.getItem('auth-store') || '{}');
+      const currentUserId = authStore?.state?.user?.id || 'guest';
       
       const payment: PaymentResponse = {
         success: true,
-        transactionId: `TXN-${Date.now()}`,
+        transactionId,
         amount: get().totalPrice,
         currency: 'COP',
         paymentMethod: paymentData.method,
@@ -151,29 +172,53 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
         get().markSeatsAsOccupied(currentShowtimeId, seatIds);
         
         const newReservation: Reservation = {
-          id: `RES-${Date.now()}`,
-          userId: 'user-1',
+          id: reservationId,
+          userId: currentUserId,
           showtimeId: currentShowtimeId,
           seatIds: seatIds,
           totalPrice: get().totalPrice,
           status: 'confirmed',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          transactionId: transactionId
         };
+
+        const reservationData = JSON.parse(localStorage.getItem('reservationData') || '{}');
+        const completeReservationData = {
+          ...newReservation,
+          movie: reservationData.movie,
+          showtime: reservationData.showtime,
+          selectedSeats: selectedSeats,
+          paymentData: {
+            ...paymentData,
+            cardNumber: `****-****-****-${paymentData.cardNumber.slice(-4)}`
+          }
+        };
+        
+        localStorage.setItem(`reservation_${transactionId}`, JSON.stringify(completeReservationData));
+
+        const userReservationsKey = `user_reservations_${currentUserId}`;
+        const existingReservations = JSON.parse(localStorage.getItem(userReservationsKey) || '[]');
+        const updatedReservations = [...existingReservations, completeReservationData];
+        localStorage.setItem(userReservationsKey, JSON.stringify(updatedReservations));
 
         const { reservations } = get();
         set({ 
           reservations: [...reservations, newReservation],
+          lastReservation: newReservation,
           selectedSeats: [], 
           totalPrice: 0, 
           isLoading: false 
         });
 
+        console.log('💰 Pago procesado exitosamente:', transactionId);
+        console.log('👤 Reserva guardada para usuario:', currentUserId);
         return payment;
       } else {
         throw new Error(payment.message || 'Payment failed');
       }
     } catch (error) {
+      console.error('💥 Error en createReservation:', error);
       set({
         error: error instanceof Error ? error.message : 'Reservation failed',
         isLoading: false,
@@ -267,5 +312,15 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
     };
     
     set({ occupiedSeats: mockOccupiedSeats });
+  },
+
+  getReservationByTransactionId: (transactionId: string) => {
+    try {
+      const reservationData = localStorage.getItem(`reservation_${transactionId}`);
+      return reservationData ? JSON.parse(reservationData) : null;
+    } catch (error) {
+      console.error('Error getting reservation by transaction ID:', error);
+      return null;
+    }
   },
 })); 
