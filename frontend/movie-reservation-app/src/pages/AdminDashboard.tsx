@@ -180,12 +180,49 @@ export function AdminDashboard() {
     setIsSubmitting(true);
     
     try {
+      // Validar que la fecha de la función no sea anterior a la fecha de estreno
+      const selectedMovie = movies.find(m => m.id === showtimeFormData.movieId);
+      if (selectedMovie) {
+        const releaseDate = new Date(selectedMovie.releaseDate);
+        const showtimeDate = new Date(showtimeFormData.date);
+        
+        // Resetear las horas para comparar solo fechas
+        releaseDate.setHours(0, 0, 0, 0);
+        showtimeDate.setHours(0, 0, 0, 0);
+        
+        if (showtimeDate < releaseDate) {
+          alert(`No se puede programar una función antes de la fecha de estreno (${selectedMovie.releaseDate})`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Validar que la fecha no sea en el pasado
+      const today = new Date();
+      const showtimeDate = new Date(showtimeFormData.date);
+      today.setHours(0, 0, 0, 0);
+      showtimeDate.setHours(0, 0, 0, 0);
+      
+      if (showtimeDate < today) {
+        alert('No se puede programar una función en una fecha pasada');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validar que el precio sea válido
+      const price = parseFloat(showtimeFormData.price);
+      if (isNaN(price) || price <= 0) {
+        alert('El precio debe ser un número mayor a 0');
+        setIsSubmitting(false);
+        return;
+      }
+
       const showtimeData: CreateShowtimeRequest = {
         movieId: showtimeFormData.movieId,
         date: showtimeFormData.date,
         time: showtimeFormData.time,
         hallId: showtimeFormData.hallId,
-        price: parseFloat(showtimeFormData.price)
+        price: price
       };
 
       if (editingShowtime) {

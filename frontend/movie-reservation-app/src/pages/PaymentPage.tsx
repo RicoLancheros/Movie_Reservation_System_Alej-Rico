@@ -12,6 +12,7 @@ interface ReservationData {
   showtime: Showtime;
   selectedSeats: Seat[];
   totalPrice: number;
+  showtimeId: string;
 }
 
 interface PaymentForm {
@@ -25,32 +26,76 @@ interface PaymentForm {
 
 export function PaymentPage() {
   const navigate = useNavigate();
+  const { 
+    createReservation, 
+    isLoading: reservationLoading,
+    setCurrentShowtime,
+    selectSeat,
+    clearSelectedSeats,
+    calculateTotalPrice
+  } = useReservationStore();
+  const { user } = useAuthStore();
+  
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
   const [formData, setFormData] = useState<PaymentForm>({
     cardNumber: '',
     expiryDate: '',
     cvv: '',
-    cardholderName: '',
-    email: '',
-    phone: ''
+    cardholderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '',
+    email: user?.email || '',
+    phone: user?.phone || ''
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<Partial<PaymentForm>>({});
 
   useEffect(() => {
-    try {
-      const storedData = localStorage.getItem('reservationData');
-      if (storedData) {
-        const parsed = JSON.parse(storedData) as ReservationData;
-        setReservationData(parsed);
-      } else {
+    const setupReservationData = async () => {
+      try {
+        const storedData = localStorage.getItem('reservationData');
+        if (storedData) {
+          const parsed = JSON.parse(storedData) as ReservationData;
+          setReservationData(parsed);
+          
+          // Configurar el reservation store con los datos necesarios de manera secuencial
+          setCurrentShowtime(parsed.showtimeId);
+          clearSelectedSeats();
+          
+          // Esperar un poco para que el store se actualice
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Seleccionar asientos uno por uno
+          for (const seat of parsed.selectedSeats) {
+            selectSeat(seat);
+          }
+          
+          // Calcular precio total después de seleccionar asientos
+          setTimeout(() => {
+            calculateTotalPrice(parsed.showtime.price);
+          }, 100);
+          
+        } else {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error loading reservation data:', error);
         navigate('/');
       }
-    } catch (error) {
-      console.error('Error loading reservation data:', error);
-      navigate('/');
+    };
+
+    setupReservationData();
+  }, [navigate, setCurrentShowtime, clearSelectedSeats, selectSeat, calculateTotalPrice]);
+
+  // Llenar datos del usuario si está logueado
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        cardholderName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || prev.cardholderName,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone
+      }));
     }
-  }, [navigate]);
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -146,53 +191,196 @@ export function PaymentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !reservationData) {
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Simular procesamiento de pago
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('🔄 Configurando store antes del pago...');
+      console.log('📊 Datos de reserva:', reservationData);
+      
+      // Obtener el estado actual del store
+      const store = useReservationStore.getState();
+      
+      // Configurar directamente usando el estado del store
+      console.log('🎬 Configurando showtime:', reservationData.showtimeId);
+      store.setCurrentShowtime(reservationData.showtimeId);
+      
+      // Limpiar asientos seleccionados
+      console.log('🧹 Limpiando asientos seleccionados...');
+      store.clearSelectedSeats();
+      
+      // Seleccionar asientos directamente
+      console.log('🪑 Seleccionando asientos:', reservationData.selectedSeats.map(s => s.id));
+      for (const seat of reservationData.selectedSeats) {
+        console.log('➕ Seleccionando asiento:', seat.id);
+        store.selectSeat(seat);
+      }
+      
+      // Calcular precio total
+      console.log('💰 Calculando precio total...');
+      store.calculateTotalPrice(reservationData.showtime.price);
+      
+      // Verificar el estado final
+      const finalState = useReservationStore.getState();
+      console.log('🔍 Estado final del store:', {
+        currentShowtimeId: finalState.currentShowtimeId,
+        selectedSeatsCount: finalState.selectedSeats.length,
+        selectedSeatIds: finalState.selectedSeats.map(s => s.id),
+        totalPrice: finalState.totalPrice
+      });
+      
+      // Verificar que todo esté configurado correctamente
+      if (!finalState.currentShowtimeId || finalState.selectedSeats.length === 0) {
+        console.error('❌ Store no configurado correctamente después de configuración directa');
+        
+        // Intento alternativo: configurar manualmente el estado
+        console.log('🔄 Intentando configuración alternativa...');
+        
+        // Crear el estado manualmente para el pago
+        const manualState = {
+          currentShowtimeId: reservationData.showtimeId,
+          selectedSeats: reservationData.selectedSeats,
+          totalPrice: reservationData.totalPrice
+        };
+        
+        // Usar una función de createReservation modificada que acepte parámetros
+        const paymentData: PaymentData = {
+          cardNumber: formData.cardNumber.replace(/\s/g, ''),
+          expiryDate: formData.expiryDate,
+          cvv: formData.cvv,
+          cardholderName: formData.cardholderName,
+          method: 'credit'
+        };
+        
+        // Procesar pago con datos manuales
+        const paymentResponse = await processManualReservation(manualState, paymentData);
+        
+        if (paymentResponse.success) {
+          console.log('🎉 Pago exitoso con configuración manual, redirigiendo...');
+          
+          // Limpiar datos de reserva temporal
+          localStorage.removeItem('reservationData');
+          localStorage.removeItem('selectedShowtime');
+          localStorage.removeItem('selectedMovie');
 
-      // Crear ticket de reserva
-      const reservationId = `RES-${Date.now()}`;
-      const ticket = {
-        id: reservationId,
-        movie: reservationData!.movie,
-        showtime: reservationData!.showtime,
-        seats: reservationData!.selectedSeats,
-        totalPrice: reservationData!.totalPrice,
-        customerInfo: {
-          name: formData.cardholderName,
-          email: formData.email,
-          phone: formData.phone
-        },
-        paymentInfo: {
-          cardNumber: `****-****-****-${formData.cardNumber.slice(-4)}`,
-          transactionId: `TXN-${Date.now()}`
-        },
-        purchaseDate: new Date().toISOString(),
-        status: 'confirmed'
+          // Redirigir a confirmación con el ID de la transacción
+          navigate(`/confirmation/${paymentResponse.transactionId}`);
+          return;
+        } else {
+          throw new Error(paymentResponse.message || 'Error en el pago');
+        }
+      }
+      
+      console.log('✅ Store configurado correctamente, procesando pago...');
+      
+      // Preparar datos de pago
+      const paymentData: PaymentData = {
+        cardNumber: formData.cardNumber.replace(/\s/g, ''),
+        expiryDate: formData.expiryDate,
+        cvv: formData.cvv,
+        cardholderName: formData.cardholderName,
+        method: 'credit'
       };
 
-      // Guardar ticket en localStorage
-      localStorage.setItem('currentTicket', JSON.stringify(ticket));
-      
-      // Limpiar datos de reserva temporal
-      localStorage.removeItem('reservationData');
-      localStorage.removeItem('selectedShowtime');
-      localStorage.removeItem('selectedMovie');
+      // Procesar pago y crear reserva
+      const paymentResponse = await createReservation(paymentData);
 
-      // Redirigir a confirmación
-      navigate('/confirmation');
+      if (paymentResponse.success) {
+        console.log('🎉 Pago exitoso, redirigiendo...');
+        
+        // Limpiar datos de reserva temporal
+        localStorage.removeItem('reservationData');
+        localStorage.removeItem('selectedShowtime');
+        localStorage.removeItem('selectedMovie');
+
+        // Redirigir a confirmación con el ID de la transacción
+        navigate(`/confirmation/${paymentResponse.transactionId}`);
+      } else {
+        throw new Error(paymentResponse.message || 'Error en el pago');
+      }
 
     } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('Error al procesar el pago. Por favor, intenta nuevamente.');
+      console.error('❌ Error processing payment:', error);
+      alert(`Error al procesar el pago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Función auxiliar para procesar pago manualmente
+  const processManualReservation = async (manualState: any, paymentData: PaymentData) => {
+    try {
+      console.log('🔧 Procesando reserva manual con estado:', manualState);
+      
+      // Simular el procesamiento de pago
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const transactionId = `TXN-${Date.now()}`;
+      const reservationId = `RES-${Date.now()}`;
+      
+      // Obtener el usuario actual
+      const currentUserId = user?.id || 'guest';
+      
+      const payment = {
+        success: true,
+        transactionId,
+        amount: manualState.totalPrice,
+        currency: 'COP',
+        paymentMethod: paymentData.method,
+        message: 'Pago procesado exitosamente'
+      };
+      
+      if (payment.success) {
+        // Marcar asientos como ocupados
+        const store = useReservationStore.getState();
+        const seatIds = manualState.selectedSeats.map((seat: any) => seat.id);
+        store.markSeatsAsOccupied(manualState.currentShowtimeId, seatIds);
+        
+        // Crear nueva reserva
+        const newReservation = {
+          id: reservationId,
+          userId: currentUserId, // Usar el ID del usuario actual
+          showtimeId: manualState.currentShowtimeId,
+          seatIds: seatIds,
+          totalPrice: manualState.totalPrice,
+          status: 'confirmed',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          transactionId: transactionId
+        };
+
+        // Guardar datos completos de la reserva
+        const completeReservationData = {
+          ...newReservation,
+          movie: reservationData?.movie,
+          showtime: reservationData?.showtime,
+          selectedSeats: manualState.selectedSeats,
+          paymentData: {
+            ...paymentData,
+            cardNumber: `****-****-****-${paymentData.cardNumber.slice(-4)}`
+          }
+        };
+        
+        localStorage.setItem(`reservation_${transactionId}`, JSON.stringify(completeReservationData));
+        
+        // Guardar también en la lista de reservas del usuario
+        const userReservationsKey = `user_reservations_${currentUserId}`;
+        const existingReservations = JSON.parse(localStorage.getItem(userReservationsKey) || '[]');
+        const updatedReservations = [...existingReservations, completeReservationData];
+        localStorage.setItem(userReservationsKey, JSON.stringify(updatedReservations));
+        
+        console.log('💰 Reserva manual procesada exitosamente:', transactionId);
+        console.log('👤 Reserva guardada para usuario:', currentUserId);
+        return payment;
+      }
+      
+      throw new Error('Payment failed');
+    } catch (error) {
+      console.error('💥 Error en reserva manual:', error);
+      throw error;
     }
   };
 
@@ -218,217 +406,223 @@ export function PaymentPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <p className="text-gray-500">Cargando información de pago...</p>
+          <p className="text-gray-500 mb-4">Cargando información de pago...</p>
+          <Button onClick={() => navigate('/')}>
+            Volver al inicio
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Header */}
+      <div className="mb-8">
         <Button 
           variant="ghost" 
-          onClick={() => navigate(-1)}
-          className="mb-6 flex items-center gap-2"
+          onClick={() => navigate(`/seats/${reservationData.showtimeId}`)}
+          className="mb-4 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a selección de asientos
         </Button>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Payment Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Lock className="h-5 w-5 text-green-600" />
-                <h2 className="text-xl font-bold text-gray-900">Información de Pago</h2>
-                <span className="text-sm text-green-600 font-medium">Seguro</span>
-              </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Información de Pago</h1>
+        <p className="text-gray-600">Completa los datos para confirmar tu reserva</p>
+      </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Información Personal */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Información Personal</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nombre Completo *
-                      </label>
-                      <Input
-                        name="cardholderName"
-                        value={formData.cardholderName}
-                        onChange={handleInputChange}
-                        placeholder="Nombre como aparece en la tarjeta"
-                        icon={<User />}
-                        error={errors.cardholderName}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
-                      </label>
-                      <Input
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="tu@email.com"
-                        error={errors.email}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono *
-                    </label>
-                    <Input
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+57 300 123 4567"
-                      error={errors.phone}
-                    />
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Payment Form */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Datos de la Tarjeta
+          </h2>
 
-                {/* Información de Tarjeta */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de Tarjeta</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Número de Tarjeta *
-                      </label>
-                      <Input
-                        name="cardNumber"
-                        value={formData.cardNumber}
-                        onChange={handleInputChange}
-                        placeholder="1234 5678 9012 3456"
-                        icon={<CreditCard />}
-                        error={errors.cardNumber}
-                      />
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Fecha de Expiración *
-                        </label>
-                        <Input
-                          name="expiryDate"
-                          value={formData.expiryDate}
-                          onChange={handleInputChange}
-                          placeholder="MM/AA"
-                          icon={<Calendar />}
-                          error={errors.expiryDate}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          CVV *
-                        </label>
-                        <Input
-                          name="cvv"
-                          value={formData.cvv}
-                          onChange={handleInputChange}
-                          placeholder="123"
-                          error={errors.cvv}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
-                        Procesando Pago...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        Completar Pago - {formatPrice(reservationData.totalPrice)}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Número de Tarjeta
+              </label>
+              <Input
+                type="text"
+                name="cardNumber"
+                value={formData.cardNumber}
+                onChange={handleInputChange}
+                placeholder="1234 5678 9012 3456"
+                error={errors.cardNumber}
+                required
+              />
             </div>
-          </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Resumen de Compra</h3>
-              
-              <div className="flex gap-4 mb-6">
-                <img
-                  src={reservationData.movie.posterImage}
-                  alt={reservationData.movie.title}
-                  className="w-16 h-24 object-cover rounded"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
-                  }}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de Vencimiento
+                </label>
+                <Input
+                  type="text"
+                  name="expiryDate"
+                  value={formData.expiryDate}
+                  onChange={handleInputChange}
+                  placeholder="MM/AA"
+                  error={errors.expiryDate}
+                  required
                 />
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">{reservationData.movie.title}</h4>
-                  <p className="text-sm text-gray-600">{reservationData.movie.genre}</p>
-                  <p className="text-sm text-gray-600">{reservationData.movie.duration} min</p>
-                </div>
               </div>
 
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Fecha:</span>
-                  <span className="text-gray-900">{formatDate(reservationData.showtime.date)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Hora:</span>
-                  <span className="text-gray-900">{reservationData.showtime.time}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sala:</span>
-                  <span className="text-gray-900">{reservationData.showtime.hallId.replace('hall', '')}</span>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CVV
+                </label>
+                <Input
+                  type="text"
+                  name="cvv"
+                  value={formData.cvv}
+                  onChange={handleInputChange}
+                  placeholder="123"
+                  error={errors.cvv}
+                  required
+                />
               </div>
+            </div>
 
-              <div className="border-t border-gray-200 pt-4 mb-4">
-                <h4 className="font-semibold text-gray-900 mb-3">
-                  Asientos ({reservationData.selectedSeats.length})
-                </h4>
-                <div className="space-y-2">
-                  {reservationData.selectedSeats.map(seat => (
-                    <div key={seat.id} className="flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        Fila {seat.row}, Asiento {seat.number}
-                      </span>
-                      <span className="text-gray-900">{formatPrice(reservationData.showtime.price)}</span>
-                    </div>
-                  ))}
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre del Titular
+              </label>
+              <Input
+                type="text"
+                name="cardholderName"
+                value={formData.cardholderName}
+                onChange={handleInputChange}
+                placeholder="Como aparece en la tarjeta"
+                error={errors.cardholderName}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email de Confirmación
+              </label>
+              <Input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="tu@email.com"
+                error={errors.email}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Teléfono
+              </label>
+              <Input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="+57 300 123 4567"
+                error={errors.phone}
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isProcessing || reservationLoading}
+              className="w-full"
+            >
+              {isProcessing || reservationLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Procesando Pago...
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Confirmar Pago ({formatPrice(reservationData.totalPrice)})
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 p-4 bg-green-50 rounded-lg">
+            <p className="text-sm text-green-800 flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Tu información está protegida con encriptación SSL
+            </p>
+          </div>
+        </div>
+
+        {/* Order Summary */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Resumen de tu Compra</h2>
+
+          <div className="space-y-6">
+            {/* Movie Info */}
+            <div className="flex gap-4">
+              <img
+                src={reservationData.movie.posterImage}
+                alt={reservationData.movie.title}
+                className="w-16 h-24 object-cover rounded"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                }}
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{reservationData.movie.title}</h3>
+                <p className="text-gray-600 text-sm">{reservationData.movie.genre}</p>
+                <p className="text-gray-600 text-sm">{reservationData.movie.duration} min</p>
               </div>
+            </div>
 
-              <div className="border-t border-gray-200 pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-900">Total:</span>
-                  <span className="text-xl font-bold text-blue-600">
-                    {formatPrice(reservationData.totalPrice)}
+            {/* Showtime Info */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 text-gray-600 mb-2">
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">{formatDate(reservationData.showtime.date)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600 mb-2">
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">{reservationData.showtime.time}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <User className="h-4 w-4" />
+                <span className="text-sm">{reservationData.showtime.hallName || `Sala ${reservationData.showtime.hallId}`}</span>
+              </div>
+            </div>
+
+            {/* Seats */}
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Asientos seleccionados:</p>
+              <div className="flex flex-wrap gap-2">
+                {reservationData.selectedSeats.map((seat) => (
+                  <span
+                    key={seat.id}
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                  >
+                    {seat.row}{seat.number}
                   </span>
-                </div>
+                ))}
               </div>
+              <p className="text-sm text-gray-600 mt-2">
+                {reservationData.selectedSeats.length} entrada{reservationData.selectedSeats.length !== 1 ? 's' : ''}
+              </p>
+            </div>
 
-              <div className="mt-6 p-3 bg-green-50 rounded-lg">
-                <p className="text-xs text-green-600">
-                  <Lock className="h-3 w-3 inline mr-1" />
-                  Tus datos están protegidos con encriptación SSL
-                </p>
+            {/* Total */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-gray-900">Total:</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {formatPrice(reservationData.totalPrice)}
+                </span>
               </div>
             </div>
           </div>

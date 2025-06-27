@@ -200,8 +200,31 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         )}
 
         {/* Demo Notice */}
-        <div className="mt-6 p-3 bg-blue-50 border border-blue-200 text-blue-600 rounded-md text-sm">
-          <strong>Nota:</strong> Esta es una aplicación de demostración. Puedes usar cualquier usuario y contraseña para probar la funcionalidad.
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="text-blue-800 text-sm">
+            <strong className="block mb-2">🔑 Usuarios de Prueba Disponibles:</strong>
+            <div className="space-y-1 text-xs font-mono">
+              <div className="flex justify-between">
+                <span>Usuario: <strong>admin</strong></span>
+                <span>Contraseña: <strong>admin123</strong></span>
+              </div>
+              <div className="flex justify-between">
+                <span>Usuario: <strong>usuario</strong></span>
+                <span>Contraseña: <strong>usuario123</strong></span>
+              </div>
+              <div className="flex justify-between">
+                <span>Usuario: <strong>maria.garcia</strong></span>
+                <span>Contraseña: <strong>maria2024</strong></span>
+              </div>
+              <div className="flex justify-between">
+                <span>Usuario: <strong>carlos.rodriguez</strong></span>
+                <span>Contraseña: <strong>carlos456</strong></span>
+              </div>
+            </div>
+            <p className="text-xs mt-2 text-blue-600">
+              El usuario <strong>admin</strong> tiene acceso al panel de administración.
+            </p>
+          </div>
         </div>
       </div>
     </Modal>

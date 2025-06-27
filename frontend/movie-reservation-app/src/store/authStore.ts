@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types';
+import type { User, LoginRequest, RegisterRequest } from '../types';
 
 // Definiendo AuthResponse aquí para evitar problemas de importación
 interface AuthResponse {
@@ -31,39 +31,91 @@ interface AuthActions {
 
 type AuthStore = AuthState & AuthActions;
 
-// Mock users for demonstration
-const mockUsers = [
+// Base de datos mock de usuarios con contraseñas específicas
+const mockUsersDatabase = [
   {
-    id: '1',
     username: 'admin',
-    email: 'admin@cinereserva.com',
-    firstName: 'Admin',
-    lastName: 'User',
-    phone: '+57 300 123 4567',
-    birthDate: '1985-06-15',
-    preferences: {
-      notifications: true,
-      language: 'es' as const,
-      favoriteGenres: ['Acción', 'Ciencia Ficción']
-    },
-    roles: [{ id: '1', name: 'ROLE_ADMIN' as const }]
+    password: 'admin123', // Contraseña específica para admin
+    user: {
+      id: '1',
+      username: 'admin',
+      email: 'admin@cinereserva.com',
+      firstName: 'Administrador',
+      lastName: 'Sistema',
+      phone: '+57 301 234 5678',
+      birthDate: '1985-05-15',
+      preferences: {
+        notifications: true,
+        language: 'es' as const,
+        favoriteGenres: ['Acción', 'Sci-Fi', 'Thriller']
+      },
+      roles: [
+        { id: '1', name: 'ROLE_ADMIN' as const },
+        { id: '2', name: 'ROLE_USER' as const }
+      ]
+    }
   },
   {
-    id: '2',
-    username: 'user',
-    email: 'user@example.com',
-    firstName: 'Regular',
-    lastName: 'User',
-    phone: '+57 300 987 6543',
-    birthDate: '1990-03-22',
-    preferences: {
-      notifications: true,
-      language: 'es' as const,
-      favoriteGenres: ['Comedia', 'Drama']
-    },
-    roles: [{ id: '2', name: 'ROLE_USER' as const }]
+    username: 'usuario',
+    password: 'usuario123', // Contraseña específica para usuario normal
+    user: {
+      id: '2',
+      username: 'usuario',
+      email: 'usuario@email.com',
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      phone: '+57 310 987 6543',
+      birthDate: '1992-08-20',
+      preferences: {
+        notifications: true,
+        language: 'es' as const,
+        favoriteGenres: ['Drama', 'Romance', 'Comedia']
+      },
+      roles: [{ id: '2', name: 'ROLE_USER' as const }]
+    }
+  },
+  {
+    username: 'maria.garcia',
+    password: 'maria2024', // Usuario adicional
+    user: {
+      id: '3',
+      username: 'maria.garcia',
+      email: 'maria.garcia@email.com',
+      firstName: 'María',
+      lastName: 'García',
+      phone: '+57 320 456 7890',
+      birthDate: '1990-03-22',
+      preferences: {
+        notifications: true,
+        language: 'es' as const,
+        favoriteGenres: ['Comedia', 'Drama', 'Musical']
+      },
+      roles: [{ id: '2', name: 'ROLE_USER' as const }]
+    }
+  },
+  {
+    username: 'carlos.rodriguez',
+    password: 'carlos456', // Usuario adicional
+    user: {
+      id: '4',
+      username: 'carlos.rodriguez',
+      email: 'carlos.rodriguez@email.com',
+      firstName: 'Carlos',
+      lastName: 'Rodríguez',
+      phone: '+57 315 123 4567',
+      birthDate: '1988-11-10',
+      preferences: {
+        notifications: false,
+        language: 'es' as const,
+        favoriteGenres: ['Acción', 'Aventura', 'Sci-Fi']
+      },
+      roles: [{ id: '2', name: 'ROLE_USER' as const }]
+    }
   }
 ];
+
+// Lista de usuarios públicos (sin contraseñas para mostrar en UI)
+const mockUsers = mockUsersDatabase.map(entry => entry.user);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -83,47 +135,41 @@ export const useAuthStore = create<AuthStore>()(
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         try {
-          // Check if user exists (for demo, any username with min 3 chars and password with min 6 chars)
-          if (credentials.username.length < 3) {
+          // Validaciones básicas
+          if (!credentials.username || credentials.username.trim().length < 3) {
             throw new Error('Usuario debe tener al menos 3 caracteres');
           }
-          if (credentials.password.length < 6) {
+          if (!credentials.password || credentials.password.length < 6) {
             throw new Error('Contraseña debe tener al menos 6 caracteres');
           }
 
-          // Find user or create a default one
-          let user = mockUsers.find(u => u.username === credentials.username);
+          // Buscar usuario en la base de datos mock
+          const userEntry = mockUsersDatabase.find(entry => 
+            entry.username === credentials.username.trim()
+          );
           
-          if (!user) {
-            // Create a new user for demo
-            user = {
-              id: Date.now().toString(),
-              username: credentials.username,
-              email: `${credentials.username}@example.com`,
-              firstName: credentials.username,
-              lastName: 'Demo',
-              phone: '+57 300 000 0000',
-              birthDate: '1990-01-01',
-              preferences: {
-                notifications: true,
-                language: 'es' as const,
-                favoriteGenres: []
-              },
-              roles: [{ id: '2', name: 'ROLE_USER' as const }]
-            };
+          if (!userEntry) {
+            throw new Error('Usuario no encontrado. Usuarios disponibles: admin, usuario, maria.garcia, carlos.rodriguez');
           }
 
-          const token = `demo-token-${Date.now()}`;
+          // Verificar contraseña
+          if (userEntry.password !== credentials.password) {
+            throw new Error('Contraseña incorrecta');
+          }
+
+          const token = `auth-token-${Date.now()}-${userEntry.user.id}`;
           
           set({
-            user,
+            user: userEntry.user,
             token,
             isAuthenticated: true,
             isLoading: false,
           });
+
+          console.log(`✅ Login exitoso para ${userEntry.user.firstName} ${userEntry.user.lastName}`);
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : 'Login failed',
+            error: error instanceof Error ? error.message : 'Error de autenticación',
             isLoading: false,
           });
           throw error;
@@ -137,31 +183,41 @@ export const useAuthStore = create<AuthStore>()(
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         try {
-          // Basic validation
-          if (userData.username.length < 3) {
+          // Validaciones mejoradas
+          if (!userData.username || userData.username.trim().length < 3) {
             throw new Error('Usuario debe tener al menos 3 caracteres');
           }
-          if (userData.password.length < 6) {
+          if (!userData.password || userData.password.length < 6) {
             throw new Error('Contraseña debe tener al menos 6 caracteres');
           }
-          if (!userData.email.includes('@')) {
+          if (!userData.email || !userData.email.includes('@') || !userData.email.includes('.')) {
             throw new Error('Email inválido');
           }
 
-          // Check if user already exists
-          const existingUser = mockUsers.find(u => u.username === userData.username);
+          // Check if username already exists
+          const existingUser = mockUsersDatabase.find(entry => 
+            entry.username === userData.username.trim()
+          );
           if (existingUser) {
-            throw new Error('El usuario ya existe');
+            throw new Error('El usuario ya existe. Prueba con otro nombre de usuario.');
+          }
+
+          // Check if email already exists
+          const existingEmail = mockUsersDatabase.find(entry => 
+            entry.user.email === userData.email.trim()
+          );
+          if (existingEmail) {
+            throw new Error('El email ya está registrado. Prueba con otro email.');
           }
 
           // Create new user
           const newUser: User = {
             id: Date.now().toString(),
-            username: userData.username,
-            email: userData.email,
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            phone: '+57 300 000 0000',
+            username: userData.username.trim(),
+            email: userData.email.trim(),
+            firstName: userData.firstName?.trim() || 'Usuario',
+            lastName: userData.lastName?.trim() || 'Nuevo',
+            phone: '',
             birthDate: '',
             preferences: {
               notifications: true,
@@ -171,7 +227,15 @@ export const useAuthStore = create<AuthStore>()(
             roles: [{ id: '2', name: 'ROLE_USER' as const }]
           };
 
-          const token = `demo-token-${Date.now()}`;
+          // Add to mock database (in real app this would be sent to server)
+          const newEntry = {
+            username: newUser.username,
+            password: userData.password,
+            user: newUser
+          };
+          mockUsersDatabase.push(newEntry);
+
+          const token = `auth-token-${Date.now()}-${newUser.id}`;
           
           set({
             user: newUser,
@@ -179,9 +243,11 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          console.log(`✅ Registro exitoso para ${newUser.firstName} ${newUser.lastName}`);
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : 'Registration failed',
+            error: error instanceof Error ? error.message : 'Error en el registro',
             isLoading: false,
           });
           throw error;
@@ -200,6 +266,11 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('No hay usuario autenticado');
           }
 
+          // Validar email si se está actualizando
+          if (userData.email && (!userData.email.includes('@') || !userData.email.includes('.'))) {
+            throw new Error('Email inválido');
+          }
+
           // Merge the updated data
           const updatedUser: User = {
             ...user,
@@ -210,12 +281,18 @@ export const useAuthStore = create<AuthStore>()(
             }
           };
 
+          // Update in mock database too
+          const userEntry = mockUsersDatabase.find(entry => entry.user.id === user.id);
+          if (userEntry) {
+            userEntry.user = updatedUser;
+          }
+
           set({
             user: updatedUser,
             isLoading: false,
           });
 
-          console.log('Perfil actualizado exitosamente');
+          console.log('✅ Perfil actualizado exitosamente');
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Error al actualizar perfil',
@@ -226,12 +303,22 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          error: null,
+        // Limpiar reservas globales del store al hacer logout
+        const reservationStore = JSON.parse(localStorage.getItem('reservation-store') || '{}');
+        if (reservationStore.state) {
+          reservationStore.state.reservations = [];
+          reservationStore.state.selectedSeats = [];
+          reservationStore.state.totalPrice = 0;
+          reservationStore.state.currentShowtimeId = null;
+          localStorage.setItem('reservation-store', JSON.stringify(reservationStore));
+        }
+        
+        set({ 
+          user: null, 
+          isAuthenticated: false, 
+          error: null 
         });
+        console.log('👋 Usuario desconectado y reservas limpiadas');
       },
 
       setUser: (user) => set({ user }),

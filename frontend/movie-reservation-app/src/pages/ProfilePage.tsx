@@ -38,47 +38,34 @@ export function ProfilePage() {
     }
   });
 
-  // Mock reservations data - en producción vendría de una API
+  // Cargar reservas del usuario actual
   useEffect(() => {
-    // Simular datos de reservas
-    const mockReservations: Reservation[] = [
-      {
-        id: '1',
-        movieTitle: 'Avengers: Endgame',
-        date: '2024-01-15',
-        time: '19:30',
-        seats: ['F8', 'F9'],
-        totalPrice: 60000,
-        status: 'completed',
-        theater: 'Sala VIP 1',
-        bookingDate: '2024-01-10'
-      },
-      {
-        id: '2',
-        movieTitle: 'Spider-Man: No Way Home',
-        date: '2024-01-20',
-        time: '21:00',
-        seats: ['G5', 'G6', 'G7'],
-        totalPrice: 45000,
-        status: 'confirmed',
-        theater: 'Sala Estándar 3',
-        bookingDate: '2024-01-18'
-      },
-      {
-        id: '3',
-        movieTitle: 'Dune: Part Two',
-        date: '2024-01-12',
-        time: '16:00',
-        seats: ['D10'],
-        totalPrice: 22000,
-        status: 'cancelled',
-        theater: 'Sala 4DX',
-        bookingDate: '2024-01-08'
-      }
-    ];
-    
-    setReservations(mockReservations);
-  }, []);
+    if (user?.id) {
+      // Cargar reservas reales del localStorage para el usuario actual
+      const userReservationsKey = `user_reservations_${user.id}`;
+      const userReservations = JSON.parse(localStorage.getItem(userReservationsKey) || '[]');
+      
+      // Convertir a formato de ProfilePage
+      const formattedReservations: Reservation[] = userReservations.map((reservation: any) => ({
+        id: reservation.id,
+        movieTitle: reservation.movie?.title || 'Película desconocida',
+        date: reservation.showtime?.date || new Date().toISOString().split('T')[0],
+        time: reservation.showtime?.time || '00:00',
+        seats: reservation.seatIds || [],
+        totalPrice: reservation.totalPrice || 0,
+        status: reservation.status || 'confirmed',
+        theater: `Sala ${reservation.showtime?.hallId || '1'}`,
+        bookingDate: reservation.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+      }));
+      
+      console.log('📋 Reservas cargadas para usuario:', user.id);
+      console.log('🎬 Total de reservas:', formattedReservations.length);
+      setReservations(formattedReservations);
+    } else {
+      // Si no hay usuario, mostrar reservas vacías
+      setReservations([]);
+    }
+  }, [user]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
