@@ -403,9 +403,6 @@ export function ProfilePage() {
                       </p>
                       {reservation.status === 'confirmed' && (
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost">
-                            Modificar
-                          </Button>
                           <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
                             Cancelar
                           </Button>

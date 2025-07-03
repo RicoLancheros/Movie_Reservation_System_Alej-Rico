@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -206,19 +206,11 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
             <div className="space-y-1 text-xs font-mono">
               <div className="flex justify-between">
                 <span>Usuario: <strong>admin</strong></span>
-                <span>Contraseña: <strong>admin123</strong></span>
+                <span>Contraseña: <strong>password</strong></span>
               </div>
               <div className="flex justify-between">
-                <span>Usuario: <strong>usuario</strong></span>
-                <span>Contraseña: <strong>usuario123</strong></span>
-              </div>
-              <div className="flex justify-between">
-                <span>Usuario: <strong>maria.garcia</strong></span>
-                <span>Contraseña: <strong>maria2024</strong></span>
-              </div>
-              <div className="flex justify-between">
-                <span>Usuario: <strong>carlos.rodriguez</strong></span>
-                <span>Contraseña: <strong>carlos456</strong></span>
+                <span>Usuario: <strong>user</strong></span>
+                <span>Contraseña: <strong>password</strong></span>
               </div>
             </div>
             <p className="text-xs mt-2 text-blue-600">

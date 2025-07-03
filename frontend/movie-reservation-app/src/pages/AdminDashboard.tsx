@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Calendar, Clock, MapPin, DollarSign, Film, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Calendar, User, CheckCircle, TrendingUp, Film, Users, DollarSign } from 'lucide-react';
 import type { Movie, Showtime, ShowtimeFormData, CreateShowtimeRequest } from '../types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -42,7 +42,7 @@ const emptyShowtimeFormData: ShowtimeFormData = {
 type TabType = 'movies' | 'showtimes' | 'stats';
 
 export function AdminDashboard() {
-  const { movies, isLoading: moviesLoading, error: moviesError, fetchMovies } = useMovieStore();
+  const { movies, isLoading: moviesLoading, error: moviesError, fetchMovies, refreshMovies } = useMovieStore();
   const { 
     showtimes, 
     halls, 
@@ -127,7 +127,7 @@ export function AdminDashboard() {
       const movieData = {
         title: movieFormData.title,
         description: movieFormData.description,
-        posterImage: movieFormData.posterImage || 'https://via.placeholder.com/300x450?text=No+Image',
+        posterImage: movieFormData.posterImage || '/placeholder-movie.svg',
         genre: movieFormData.genre,
         duration: parseInt(movieFormData.duration),
         rating: movieFormData.rating,
@@ -136,9 +136,11 @@ export function AdminDashboard() {
         cast: movieFormData.cast.split(',').map(actor => actor.trim()).filter(actor => actor)
       };
 
+      console.log('Saving movie:', movieData);
+
       const url = editingMovie 
-        ? `http://localhost:8082/api/movies/${editingMovie.id}`
-        : 'http://localhost:8082/api/movies';
+        ? `http://localhost:8083/api/movies/${editingMovie.id}`
+        : 'http://localhost:8083/api/movies';
       
       const method = editingMovie ? 'PUT' : 'POST';
 
@@ -155,17 +157,25 @@ export function AdminDashboard() {
       }
 
       const savedMovie = await response.json();
+      console.log('Movie saved successfully:', savedMovie);
 
       // Si es una nueva película, crear función predeterminada
       if (!editingMovie) {
+        console.log('Creating default showtime for new movie...');
         await createDefaultShowtime(savedMovie.id);
       }
 
-      // Recargar las películas del backend
+      // Recargar las películas del backend con logs
+      console.log('Refreshing movies from backend...');
       await fetchMovies();
+      console.log('Current movies in store:', movies.length);
+      
       await fetchShowtimes();
       await fetchStats();
       handleCloseMovieModal();
+      
+      // Mostrar mensaje de éxito
+      alert(editingMovie ? 'Película actualizada correctamente' : 'Película creada correctamente');
       
     } catch (error) {
       console.error('Error:', error);
@@ -273,7 +283,7 @@ export function AdminDashboard() {
   const handleDeleteMovie = async (movieId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta película? También se eliminarán todas sus funciones.')) {
       try {
-        const response = await fetch(`http://localhost:8082/api/movies/${movieId}`, {
+        const response = await fetch(`http://localhost:8083/api/movies/${movieId}`, {
           method: 'DELETE'
         });
 
@@ -462,10 +472,19 @@ export function AdminDashboard() {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Gestión de Películas</h2>
-              <Button onClick={handleAddNewMovie} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Agregar Película
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={fetchMovies}
+                  className="flex items-center gap-2"
+                >
+                  🔄 Actualizar
+                </Button>
+                <Button onClick={handleAddNewMovie} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Agregar Película
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -506,7 +525,7 @@ export function AdminDashboard() {
                               src={movie.posterImage}
                               alt={movie.title}
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                                e.currentTarget.src = '/placeholder-movie.svg';
                               }}
                             />
                           </div>

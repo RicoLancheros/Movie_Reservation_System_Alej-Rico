@@ -371,6 +371,12 @@ export function PaymentPage() {
         const existingReservations = JSON.parse(localStorage.getItem(userReservationsKey) || '[]');
         const updatedReservations = [...existingReservations, completeReservationData];
         localStorage.setItem(userReservationsKey, JSON.stringify(updatedReservations));
+
+        // NUEVO: Guardar también en reservas globales para sincronización
+        const globalReservations = JSON.parse(localStorage.getItem('global_reservations') || '[]');
+        const updatedGlobalReservations = [...globalReservations, completeReservationData];
+        localStorage.setItem('global_reservations', JSON.stringify(updatedGlobalReservations));
+        console.log('🌍 Reserva manual guardada en sistema global:', completeReservationData.id);
         
         console.log('💰 Reserva manual procesada exitosamente:', transactionId);
         console.log('👤 Reserva guardada para usuario:', currentUserId);
@@ -572,7 +578,7 @@ export function PaymentPage() {
                 alt={reservationData.movie.title}
                 className="w-16 h-24 object-cover rounded"
                 onError={(e) => {
-                  e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                  e.currentTarget.src = '/placeholder-movie.svg';
                 }}
               />
               <div className="flex-1">

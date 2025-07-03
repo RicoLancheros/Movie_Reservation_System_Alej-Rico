@@ -20,9 +20,13 @@ interface MovieActions {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   syncShowtimesFromAdmin: (adminShowtimes: Showtime[]) => void;
+  refreshMovies: () => Promise<void>;
 }
 
 type MovieStore = MovieState & MovieActions;
+
+// URL base del Movie Service Go
+const MOVIE_SERVICE_URL = 'http://localhost:8083/api';
 
 export const useMovieStore = create<MovieStore>((set, get) => ({
   // State
@@ -38,22 +42,39 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { filters } = get();
-      const queryParams = new URLSearchParams();
+      let url = `${MOVIE_SERVICE_URL}/movies`;
       
-      if (filters.genre) queryParams.append('genre', filters.genre);
-      if (filters.search) queryParams.append('title', filters.search);
+      // Si hay filtros, usar el endpoint de búsqueda
+      if (filters.genre || filters.search) {
+        url = `${MOVIE_SERVICE_URL}/movies/search`;
+        const queryParams = new URLSearchParams();
+        
+        if (filters.genre) queryParams.append('genre', filters.genre);
+        if (filters.search) queryParams.append('title', filters.search);
+        
+        if (queryParams.toString()) {
+          url += `?${queryParams}`;
+        }
+      }
 
-      // Llamada real al movie-service
-      const url = `http://localhost:8082/api/movies/search?${queryParams}`;
+      // Agregar timestamp para evitar caché
+      const timestamp = new Date().getTime();
+      const separator = url.includes('?') ? '&' : '?';
+      url += `${separator}_t=${timestamp}`;
+
+      console.log('Fetching movies from:', url);
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch movies');
+        throw new Error(`Failed to fetch movies: ${response.status} ${response.statusText}`);
       }
 
       const movies: Movie[] = await response.json();
+      console.log('Movies fetched successfully:', movies.length, 'movies');
+      console.log('Movies data:', movies);
       set({ movies, isLoading: false });
     } catch (error) {
+      console.error('Error fetching movies:', error);
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch movies',
         isLoading: false,
@@ -64,7 +85,7 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   fetchMovieById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`http://localhost:8082/api/movies/${id}`);
+      const response = await fetch(`${MOVIE_SERVICE_URL}/movies/${id}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch movie');
@@ -83,7 +104,8 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   fetchShowtimes: async (movieId: string, date?: string) => {
     set({ isLoading: true, error: null });
     try {
-      let url = `http://localhost:8083/api/showtimes/movie/${movieId}`;
+      // Intentar primero con el servicio de showtimes (Java)
+      let url = `http://localhost:8084/api/showtimes/movie/${movieId}`;
       if (date) {
         url += `/date/${date}`;
       }
@@ -140,5 +162,11 @@ export const useMovieStore = create<MovieStore>((set, get) => ({
   // Nueva función para sincronizar showtime desde admin
   syncShowtimesFromAdmin: (adminShowtimes) => {
     set({ showtimes: adminShowtimes });
+  },
+
+  refreshMovies: async () => {
+    console.log('Force refreshing movies...');
+    const { fetchMovies } = get();
+    await fetchMovies();
   },
 })); 
