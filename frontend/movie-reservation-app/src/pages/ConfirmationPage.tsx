@@ -237,7 +237,7 @@ CineReserva
                   alt={ticketData.movie.title}
                   className="w-32 h-48 object-cover rounded-lg shadow-md mx-auto lg:mx-0"
                   onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                    e.currentTarget.src = '/placeholder-movie.svg';
                   }}
                 />
               </div>

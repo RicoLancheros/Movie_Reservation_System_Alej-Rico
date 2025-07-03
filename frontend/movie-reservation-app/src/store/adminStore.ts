@@ -72,24 +72,41 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   fetchShowtimes: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch('http://localhost:8083/api/showtimes');
+      const response = await fetch('http://localhost:8084/api/showtimes');
       
       if (!response.ok) {
         throw new Error('Failed to fetch showtimes');
       }
 
       const showtimes: Showtime[] = await response.json();
-      set({ showtimes, isLoading: false });
+      
+      // Enriquecer con información adicional
+      const { halls } = get();
+      const enrichedShowtimes = showtimes.map(showtime => {
+        const hall = halls.find(h => h.id === showtime.hallId);
+        return {
+          ...showtime,
+          hallName: hall?.name || 'Sala desconocida',
+          availableSeats: showtime.availableSeats || 100,
+          totalSeats: showtime.totalSeats || 100,
+        };
+      });
+
+      set({ showtimes: enrichedShowtimes, isLoading: false });
     } catch (error) {
       console.warn('Showtime service not available, using empty list');
-      set({ showtimes: [], isLoading: false, error: null });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch showtimes',
+        isLoading: false,
+        showtimes: []
+      });
     }
   },
 
   fetchShowtimesByMovie: async (movieId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`http://localhost:8083/api/showtimes/movie/${movieId}`);
+      const response = await fetch(`http://localhost:8084/api/showtimes/movie/${movieId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch showtimes for movie');
@@ -98,19 +115,20 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
       const showtimes: Showtime[] = await response.json();
       set({ showtimes, isLoading: false });
     } catch (error) {
-      console.warn('Showtime service not available, using empty list');
-      set({ showtimes: [], isLoading: false, error: null });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch showtimes',
+        isLoading: false,
+      });
     }
   },
 
   createShowtime: async (showtimeData: CreateShowtimeRequest) => {
     set({ isLoading: true, error: null });
     try {
-      // Buscar el nombre de la sala
       const { halls } = get();
       const hall = halls.find(h => h.id === showtimeData.hallId);
       
-      const response = await fetch('http://localhost:8083/api/showtimes', {
+      const response = await fetch('http://localhost:8084/api/showtimes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +188,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
       const { halls } = get();
       const hall = halls.find(h => h.id === showtimeData.hallId);
       
-      const response = await fetch(`http://localhost:8083/api/showtimes/${id}`, {
+      const response = await fetch(`http://localhost:8084/api/showtimes/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +244,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   deleteShowtime: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`http://localhost:8083/api/showtimes/${id}`, {
+      const response = await fetch(`http://localhost:8084/api/showtimes/${id}`, {
         method: 'DELETE',
       });
 
@@ -265,8 +283,8 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
     try {
       // Estadísticas calculadas desde múltiples servicios
       const [moviesResponse, showtimesResponse] = await Promise.allSettled([
-        fetch('http://localhost:8082/api/movies'),
-        fetch('http://localhost:8083/api/showtimes'),
+        fetch('http://localhost:8083/api/movies'),
+        fetch('http://localhost:8084/api/showtimes'),
       ]);
 
       let totalMovies = 0;

@@ -20,7 +20,7 @@ function MovieCard({ movie, onSelect }: MovieCardProps) {
           alt={movie.title}
           className="w-full h-96 object-cover"
           onError={(e) => {
-            e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+            e.currentTarget.src = '/placeholder-movie.svg';
           }}
         />
         <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm">

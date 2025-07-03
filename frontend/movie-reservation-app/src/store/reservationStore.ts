@@ -28,6 +28,7 @@ interface ReservationActions {
   markSeatsAsOccupied: (showtimeId: string, seatIds: string[]) => void;
   initializeMockData: () => void;
   getReservationByTransactionId: (transactionId: string) => Reservation | null;
+  migrateToGlobalReservations: () => void;
 }
 
 type ReservationStore = ReservationState & ReservationActions;
@@ -57,10 +58,6 @@ const generateMockSeatMap = (occupiedSeatIds: string[] = []): Seat[][] => {
       if ((rowIndex === 3 || rowIndex === 4) && (seatNum === 1 || seatNum === 12)) {
         type = 'accessible';
         status = status === 'occupied' ? 'occupied' : 'accessible';
-      }
-      
-      if ((rowIndex === 6 && seatNum === 6) || (rowIndex === 7 && seatNum === 7)) {
-        status = 'disabled';
       }
       
       row.push({
@@ -116,10 +113,65 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const { occupiedSeats } = get();
-      const occupiedSeatIds = occupiedSeats[showtimeId] || [];
+      // Cargar asientos ocupados desde el backend
+      let backendOccupiedSeats: string[] = [];
+      try {
+        const reservationsResponse = await fetch('http://localhost:8082/api/reservations');
+        if (reservationsResponse.ok) {
+          const reservations = await reservationsResponse.json();
+          // Filtrar reservas por showtime y extraer seatIds
+          const showtimeReservations = reservations.filter((r: any) => 
+            r.showtimeId === showtimeId && r.status === 'confirmed'
+          );
+          backendOccupiedSeats = showtimeReservations.flatMap((r: any) => r.seatIds || []);
+          console.log('✅ Asientos ocupados desde backend:', backendOccupiedSeats);
+        } else {
+          console.warn('⚠️ No se pudieron cargar reservas del backend');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al cargar reservas del backend:', error);
+      }
       
-      const seatMap = generateMockSeatMap(occupiedSeatIds);
+      // Cargar asientos de reservas locales de TODOS los usuarios
+      let localReservedSeats: string[] = [];
+      try {
+        // NUEVO: Cargar reservas globales en lugar de solo del usuario actual
+        const globalReservations = JSON.parse(localStorage.getItem('global_reservations') || '[]');
+        
+        // Filtrar por showtime y extraer seatIds de TODAS las reservas confirmadas
+        const showtimeGlobalReservations = globalReservations.filter((r: any) => 
+          r.showtimeId === showtimeId && r.status === 'confirmed'
+        );
+        localReservedSeats = showtimeGlobalReservations.flatMap((r: any) => r.seatIds || []);
+        
+        console.log('🌍 Asientos ocupados globalmente:', localReservedSeats);
+        console.log('📊 Total reservas globales para showtime:', showtimeGlobalReservations.length);
+      } catch (error) {
+        console.warn('⚠️ Error al cargar reservas globales:', error);
+      }
+      
+      // Combinar con asientos ocupados del store
+      const { occupiedSeats } = get();
+      const storeOccupiedSeats = occupiedSeats[showtimeId] || [];
+      
+      // Combinar todas las fuentes de asientos ocupados
+      const allOccupiedSeats = [...new Set([
+        ...storeOccupiedSeats, 
+        ...backendOccupiedSeats, 
+        ...localReservedSeats
+      ])];
+      
+      console.log('🎯 Total asientos ocupados (todos los usuarios):', allOccupiedSeats);
+      
+      // Actualizar occupiedSeats con todos los datos
+      set({
+        occupiedSeats: {
+          ...occupiedSeats,
+          [showtimeId]: allOccupiedSeats
+        }
+      });
+      
+      const seatMap = generateMockSeatMap(allOccupiedSeats);
       set({ seatMap, isLoading: false, currentShowtimeId: showtimeId });
     } catch (error) {
       set({
@@ -169,6 +221,33 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
 
       if (payment.success) {
         const seatIds = selectedSeats.map(seat => seat.id);
+        
+        // Crear reserva en el backend
+        try {
+          const reservationRequest = {
+            userId: currentUserId,
+            showtimeId: currentShowtimeId,
+            seatIds: seatIds
+          };
+          
+          const backendResponse = await fetch('http://localhost:8082/api/reservations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(reservationRequest)
+          });
+          
+          if (backendResponse.ok) {
+            console.log('✅ Reserva guardada en el backend');
+          } else {
+            console.warn('⚠️ No se pudo guardar en el backend, continuando con localStorage');
+          }
+        } catch (error) {
+          console.warn('⚠️ Error al conectar con el backend:', error);
+        }
+        
+        // Marcar asientos como ocupados
         get().markSeatsAsOccupied(currentShowtimeId, seatIds);
         
         const newReservation: Reservation = {
@@ -197,10 +276,17 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
         
         localStorage.setItem(`reservation_${transactionId}`, JSON.stringify(completeReservationData));
 
+        // Guardar en reservas del usuario específico
         const userReservationsKey = `user_reservations_${currentUserId}`;
         const existingReservations = JSON.parse(localStorage.getItem(userReservationsKey) || '[]');
         const updatedReservations = [...existingReservations, completeReservationData];
         localStorage.setItem(userReservationsKey, JSON.stringify(updatedReservations));
+
+        // NUEVO: Guardar también en reservas globales para sincronización
+        const globalReservations = JSON.parse(localStorage.getItem('global_reservations') || '[]');
+        const updatedGlobalReservations = [...globalReservations, completeReservationData];
+        localStorage.setItem('global_reservations', JSON.stringify(updatedGlobalReservations));
+        console.log('🌍 Reserva guardada en sistema global:', completeReservationData.id);
 
         const { reservations } = get();
         set({ 
@@ -292,15 +378,26 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
   setError: (error) => set({ error }),
 
   markSeatsAsOccupied: (showtimeId, seatIds) => {
-    const { occupiedSeats } = get();
+    const { occupiedSeats, seatMap } = get();
     const currentOccupied = occupiedSeats[showtimeId] || [];
     const updatedOccupied = [...new Set([...currentOccupied, ...seatIds])];
+    
+    // Actualizar el mapa de asientos para reflejar los nuevos asientos ocupados
+    const updatedSeatMap = seatMap.map(row =>
+      row.map(seat => {
+        if (seatIds.includes(seat.id)) {
+          return { ...seat, status: 'occupied' as const };
+        }
+        return seat;
+      })
+    );
     
     set({
       occupiedSeats: {
         ...occupiedSeats,
         [showtimeId]: updatedOccupied
-      }
+      },
+      seatMap: updatedSeatMap
     });
   },
 
@@ -323,4 +420,42 @@ export const useReservationStore = create<ReservationStore>((set, get) => ({
       return null;
     }
   },
-})); 
+
+  // NUEVA FUNCIÓN: Migrar reservas existentes al sistema global
+  migrateToGlobalReservations: () => {
+    try {
+      const globalReservations = JSON.parse(localStorage.getItem('global_reservations') || '[]');
+      
+      // Si ya existen reservas globales, no migrar
+      if (globalReservations.length > 0) {
+        console.log('🌍 Sistema global ya tiene reservas:', globalReservations.length);
+        return;
+      }
+
+      console.log('🔄 Migrando reservas existentes al sistema global...');
+      let migratedCount = 0;
+
+      // Buscar todas las claves que empiecen con 'user_reservations_'
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('user_reservations_')) {
+          const userReservations = JSON.parse(localStorage.getItem(key) || '[]');
+          globalReservations.push(...userReservations);
+          migratedCount += userReservations.length;
+        }
+      }
+
+      // Guardar las reservas migradas
+      localStorage.setItem('global_reservations', JSON.stringify(globalReservations));
+      console.log(`✅ Migración completada: ${migratedCount} reservas migradas al sistema global`);
+    } catch (error) {
+      console.warn('⚠️ Error durante la migración:', error);
+    }
+  },
+}));
+
+// Ejecutar migración automáticamente al cargar el store
+if (typeof window !== 'undefined') {
+  const store = useReservationStore.getState();
+  store.migrateToGlobalReservations();
+} 

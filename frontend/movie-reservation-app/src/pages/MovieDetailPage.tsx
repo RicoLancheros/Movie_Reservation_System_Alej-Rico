@@ -137,7 +137,7 @@ export function MovieDetailPage() {
             alt={selectedMovie.title}
             className="w-full rounded-lg shadow-lg"
             onError={(e) => {
-              e.currentTarget.src = 'https://via.placeholder.com/400x600?text=No+Image';
+              e.currentTarget.src = '/placeholder-movie.svg';
             }}
           />
         </div>

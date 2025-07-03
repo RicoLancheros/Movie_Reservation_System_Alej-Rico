@@ -1,239 +1,182 @@
-# Movie Reservation System - CineReserva 🎬
+# 🎬 Movie Reservation System - CineReserva
 
-Sistema integral de gestión de reservas de películas desarrollado con arquitectura de microservicios. Combina un backend robusto en Spring Boot con un frontend moderno en React TypeScript, ofreciendo una experiencia completa para la gestión de cines, películas y reservas de asientos.
+Sistema completo de reservación de cine con microservicios híbridos (Go + Java) y frontend React.
 
-## 📥 Instalación
+## 🏗️ **Arquitectura del Sistema**
 
-### Prerrequisitos
-- Node.js 18+ y npm
-- Java 17+
-- Docker y Docker Compose
-- Git
+### **Backend (Docker)**
+- **Servicios Go**: user-service-go (8081), movie-service-go (8083)
+- **Servicios Java**: showtime-service (8084), reservation-service (8082)  
+- **Bases de datos**: MySQL (3307), 3x MongoDB (27018-27020)
+- **API Gateway**: Traefik (80/8080)
 
-### 1. Clonar el Repositorio
+### **Frontend (Local)**
+- **React + Vite**: Desarrollo local en puerto 3000
+- **Hot reload**: Cambios en tiempo real
+- **Sin Docker**: Para máximo rendimiento
+
+## 🚀 **Inicio Rápido**
+
+### **1. Iniciar Backend**
 ```bash
-git clone https://github.com/RicoLancheros/Movie_Reservation_System_Alej-Rico.git
-cd Movie_Reservation_System_Alej-Rico
+# Windows
+start-backend.bat
+
+# Linux/Mac  
+./start-backend.sh
 ```
 
-### 2. Configurar Backend (Microservicios)
+### **2. Iniciar Frontend** 
 ```bash
-cd backend
+# Windows
+start-frontend.bat
 
-# Iniciar bases de datos con Docker
-docker-compose up -d
-
-# Verificar que los servicios estén corriendo
-docker-compose ps
-
-# Construir todos los microservicios
-cd Microservicios/movie-service
-./gradlew clean build -x test
-
-cd ../showtime-service  
-./gradlew clean build -x test
-
-cd ../reservation-service
-./gradlew clean build -x test
-
-cd ../user-service
-./gradlew clean build -x test
-```
-
-### 3. Ejecutar Microservicios
-```bash
-# En terminales separadas, ejecutar cada servicio:
-
-# Terminal 1 - Movie Service (Puerto 8082)
-cd backend/Microservicios/movie-service
-./gradlew bootRun
-
-# Terminal 2 - Showtime Service (Puerto 8083)
-cd backend/Microservicios/showtime-service
-./gradlew bootRun
-
-# Terminal 3 - Reservation Service (Puerto 8084)
-cd backend/Microservicios/reservation-service
-./gradlew bootRun
-
-# Terminal 4 - User Service (Puerto 8081)
-cd backend/Microservicios/user-service
-./gradlew bootRun
-```
-
-### 4. Configurar Frontend
-```bash
+# Linux/Mac
 cd frontend/movie-reservation-app
-
-# Instalar dependencias
 npm install
-
-# Iniciar servidor de desarrollo
 npm run dev
 ```
 
-### 5. Verificar Instalación
-- Frontend: http://localhost:5173
-- Movie Service: http://localhost:8082/api/movies
-- Showtime Service: http://localhost:8083/api/showtimes
-- Traefik Dashboard: http://localhost:8080
+### **3. Acceder al Sistema**
+- **Frontend**: http://localhost:3000
+- **API Gateway**: http://localhost:80
+- **Traefik Dashboard**: http://localhost:8080
 
-## 📖 Manual de Usuario
+## 📋 **Scripts Disponibles**
 
-### Acceso al Sistema
+### **Backend**
+- `start-backend.bat/.sh` - Inicia todos los servicios backend
+- `stop.bat/.sh` - Detiene todos los servicios
+- `docker-compose logs [servicio]` - Ver logs específicos
 
-#### Usuario Administrador
-- **Usuario**: `admin`
-- **Contraseña**: `password123`
-- **Funcionalidades**:
-  - Panel de Administración - Gestión CRUD de películas
-  - Crear Películas - Envía datos al Movie Service
-  - Editar Películas - Actualiza en base de datos MongoDB
-  - Eliminar Películas - Eliminación desde backend
+### **Frontend**
+- `start-frontend.bat` - Inicia frontend local (Windows)
+- `npm run dev` - Comando directo de desarrollo
+- `npm run build` - Construir para producción
 
-#### Usuario Regular
-- **Usuario**: `user`
-- **Contraseña**: `password123`
-- **Funcionalidades**:
-  - Explorar Catálogo - Películas reales desde Movie Service
-  - Ver Detalles - Información completa + horarios reales
-  - Reservar Asientos - Sistema completo de reservas
+## 🔧 **Servicios y Puertos**
 
-### Panel de Administración
+| Servicio | Puerto | URL | Estado |
+|----------|--------|-----|--------|
+| Frontend | 3000 | http://localhost:3000 | 🟢 Local |
+| User Service | 8081 | http://localhost:8081 | 🐳 Docker |
+| Movie Service | 8083 | http://localhost:8083 | 🐳 Docker |
+| Showtime Service | 8084 | http://localhost:8084 | 🐳 Docker |  
+| Reservation Service | 8082 | http://localhost:8082 | 🐳 Docker |
+| MySQL | 3307 | localhost:3307 | 🐳 Docker |
+| MongoDB 1 | 27018 | localhost:27018 | 🐳 Docker |
+| MongoDB 2 | 27019 | localhost:27019 | 🐳 Docker |
+| MongoDB 3 | 27020 | localhost:27020 | 🐳 Docker |
+| Traefik | 80/8080 | http://localhost:80 | 🐳 Docker |
 
-El Panel de Administración está completamente conectado al backend:
+## 🧪 **Pruebas de API**
 
-1. **Acceso**: Login como admin → Panel de Administración
-2. **Vista**: Tabla con todas las películas desde MongoDB
-3. **Funciones Disponibles**:
+### **User Service**
+```bash
+# Obtener usuarios
+curl http://localhost:8081/api/users
 
-   **Crear Película Nueva**:
-   - Formulario completo con validaciones
-   - Envío directo al Movie Service (POST /api/movies)
-   - Actualización automática de la tabla
+# Login  
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+```
 
-   **Editar Película Existente**:
-   - Carga datos reales desde backend
-   - Actualización via PUT /api/movies/{id}
-   - Cambios reflejados inmediatamente
+### **Movie Service**
+```bash
+# Obtener películas
+curl http://localhost:8083/api/movies
 
-   **Eliminar Película**:
-   - Confirmación de seguridad
-   - Eliminación via DELETE /api/movies/{id}
-   - Actualización automática del catálogo
+# Crear película
+curl -X POST http://localhost:8083/api/movies \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Nueva Película","description":"Descripción","genre":"Acción","duration":120}'
+```
 
-### Proceso de Reserva
+## 🔑 **Credenciales por Defecto**
 
-#### 1. Explorar Catálogo
-- Navegar por películas disponibles
-- Filtrar por género o buscar por título
-- Ver información básica de cada película
+### **Usuarios del Sistema**
+- **Admin**: `admin` / `password`
+- **Usuario**: `user` / `password`
 
-#### 2. Seleccionar Película
-- Hacer clic en "Ver Detalles" en cualquier película
-- Revisar información completa: sinopsis, director, reparto
-- Ver horarios disponibles para los próximos 7 días
+### **Bases de Datos**
+- **MySQL**: `movieuser` / `moviepass`
+- **MongoDB**: `admin` / `password`
 
-#### 3. Elegir Horario
-- **Precios Variables**:
-  - Lunes a Jueves: $8.000 COP
-  - Viernes a Domingo: $12.000 COP
-  - Horarios Prime (7:00 PM - 10:00 PM): +$2.000 COP
-- Hacer clic en "Reservar" en el horario deseado
+## 🛠️ **Desarrollo**
 
-#### 4. Seleccionar Asientos
-- **Mapa Interactivo**: 8 filas × 12 asientos (96 asientos totales)
-- **Códigos de Color**:
-  - Verde: Disponible
-  - Rojo: Ocupado
-  - Azul: Seleccionado
-  - Morado: Accesible
-- **Limitaciones**: Máximo 8 asientos por reserva
-- Ver resumen en tiempo real del precio total
+### **Estructura del Proyecto**
+```
+Movie_Reservation_System_Alej-Rico/
+├── backend/
+│   ├── Microservicios/
+│   │   ├── user-service-go/      # Go - Autenticación
+│   │   ├── movie-service-go/     # Go - Catálogo
+│   │   ├── showtime-service/     # Java - Horarios  
+│   │   └── reservation-service/  # Java - Reservas
+│   └── traefik/                  # API Gateway
+├── frontend/
+│   └── movie-reservation-app/    # React + Vite
+├── docker-compose.yml            # Backend services
+├── start-backend.bat/.sh         # Scripts de inicio
+└── start-frontend.bat           # Script frontend
+```
 
-#### 5. Información Personal
-- Completar formulario con datos personales
-- Información de contacto requerida
-- Validaciones automáticas
+### **Agregar Nuevas Características**
 
-#### 6. Proceso de Pago
-- **Métodos Aceptados**: Visa, MasterCard, American Express
-- **Campos Requeridos**:
-  - Número de tarjeta (formato automático)
-  - Fecha de vencimiento (MM/YY)
-  - CVV (3-4 dígitos)
-  - Nombre del titular
-- **Validaciones**: Formato de tarjeta, fecha válida, CVV correcto
+1. **Backend**: Modificar servicios en `/backend/Microservicios/`
+2. **Frontend**: Desarrollar en `/frontend/movie-reservation-app/src/`
+3. **Rebuild**: `docker-compose build [servicio]` solo para backend
+4. **Hot Reload**: Frontend se actualiza automáticamente
 
-#### 7. Confirmación
-- Ticket digital generado automáticamente
-- Código de reserva único
-- Detalles completos de la reserva
-- Opción de descargar o imprimir
+## 🐛 **Solución de Problemas**
 
-### Limitaciones del Sistema
-- **Persistencia**: Datos almacenados en localStorage (frontend)
-- **Tiempo de Sesión**: Sin límite de tiempo establecido
-- **Métodos de Pago**: Solo simulación, no procesamiento real
-- **Asientos**: Máximo 8 asientos por transacción
+### **Backend no inicia**
+```bash
+docker-compose down -v
+docker system prune -f
+docker-compose up -d --build
+```
 
-## 🛠 Tecnologías y Librerías
+### **Frontend con errores**
+```bash
+cd frontend/movie-reservation-app
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
 
-### Frontend
-- **React 18** - Biblioteca de UI moderna
-- **TypeScript** - Tipado estático para JavaScript
-- **Tailwind CSS** - Framework CSS utilitario
-- **Zustand** - Gestión de estado ligera
-- **React Router** - Navegación SPA
-- **Lucide React** - Iconografía moderna
-- **Vite** - Build tool ultrarrápido
+### **Problemas de red**
+```bash
+# Verificar servicios
+docker-compose ps
 
-### Backend
-- **Spring Boot 3.0+** - Framework Java empresarial
-- **Spring Data MongoDB** - ODM para MongoDB
-- **Spring Data JPA** - ORM para bases relacionales
-- **Spring Security** - Autenticación y autorización
-- **MySQL 8.0** - Base de datos relacional
-- **MongoDB** - Base de datos NoSQL
-- **Docker Compose** - Orquestación de contenedores
-- **Traefik v2.10** - Proxy reverso y load balancer
+# Ver logs específicos
+docker-compose logs [nombre-servicio]
 
-### Herramientas de Desarrollo
-- **Gradle** - Sistema de construcción para Java
-- **ESLint** - Linter para JavaScript/TypeScript
-- **Prettier** - Formateador de código
-- **Vitest** - Framework de testing para Vite
-- **Git** - Control de versiones
+# Reiniciar servicio específico
+docker-compose restart [nombre-servicio]
+```
 
-## 🗂 Historial de Versiones
+## 📚 **Documentación Adicional**
 
-### V0.0.3 - Sistema de Reservas Frontend Completo
-- Implementación completa del panel de administración
-- Página de detalles de película con horarios dinámicos
-- Sistema de selección de asientos interactivo
-- Proceso de pago completo con validaciones
-- Página de confirmación con ticket digital
-- Actualización del README con documentación profesional
+- **API Docs**: http://localhost:8080 (Traefik Dashboard)
+- **Logs**: `docker-compose logs -f`
+- **Monitoreo**: Todos los servicios tienen health checks
 
-### V0.0.2 - Backend y Bases de Datos
-- Configuración de microservicios Spring Boot
-- Implementación de bases de datos MongoDB y MySQL
-- Sistema de autenticación con Spring Security
-- APIs RESTful para todos los servicios
-- Configuración de Docker Compose
+## 🎯 **Características**
 
-### V0.0.1 - Estructura Base y Docker
-- Configuración inicial del proyecto
-- Estructura de microservicios
-- Configuración de Docker y docker-compose
-- Setup básico de frontend React
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
+- ✅ **Autenticación JWT** (Go)
+- ✅ **Catálogo de Películas** (Go + MongoDB)
+- ✅ **Gestión de Horarios** (Java + MongoDB)  
+- ✅ **Sistema de Reservas** (Java + MongoDB)
+- ✅ **Frontend Responsivo** (React)
+- ✅ **API Gateway** (Traefik)
+- ✅ **Hot Reload** para desarrollo
+- ✅ **Imágenes Placeholder** locales
+- ✅ **CORS configurado**
+- ✅ **Health Checks**
 
 ---
 
-**Desarrollado por**: Alejandro Rico & Rico Lancheros  
-**Versión Actual**: V0.0.3  
-**Última Actualización**: Diciembre 2024
+**Desarrollado por Alej & Rico** 🚀

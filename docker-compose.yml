@@ -1,0 +1,227 @@
+version: '3.8'
+
+services:
+  ######################## BASES DE DATOS ########################
+  
+  # MySQL para User Service
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: moviereservation
+      MYSQL_USER: movieuser
+      MYSQL_PASSWORD: moviepass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - movie-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB para Movie Service
+  mongo1:
+    image: mongo:latest
+    container_name: mongo1
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo1_data:/data/db
+    networks:
+      - movie-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB para Showtime Service
+  mongo2:
+    image: mongo:latest
+    container_name: mongo2
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo2_data:/data/db
+    networks:
+      - movie-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB para Reservation Service
+  mongo3:
+    image: mongo:latest
+    container_name: mongo3
+    ports:
+      - "27020:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo3_data:/data/db
+    networks:
+      - movie-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 20s
+      retries: 10
+
+  ######################## SERVICIOS BACKEND ########################
+
+  # User Service (Go)
+  user-service-go:
+    build:
+      context: ./backend/Microservicios/user-service-go
+      dockerfile: Dockerfile
+    container_name: user-service-go
+    ports:
+      - "8081:8081"
+    networks:
+      - movie-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.rule=PathPrefix(`/api/auth`) || PathPrefix(`/api/users`)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8081"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      timeout: 10s
+      retries: 5
+
+  # Movie Service (Go)
+  movie-service-go:
+    build:
+      context: ./backend/Microservicios/movie-service-go
+      dockerfile: Dockerfile
+    container_name: movie-service-go
+    ports:
+      - "8083:8080"
+    environment:
+      MONGO_HOST: mongo1
+      MONGO_PORT: "27017"
+      MONGO_USER: admin
+      MONGO_PASSWORD: password
+      MONGO_DATABASE: movies
+    networks:
+      - movie-network
+    depends_on:
+      mongo1:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.movie-service.rule=PathPrefix(`/api/movies`) || PathPrefix(`/api/genres`)"
+      - "traefik.http.services.movie-service.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/movies"]
+      timeout: 10s
+      retries: 5
+
+  # Showtime Service (Java)
+  showtime-service:
+    build:
+      context: ./backend/Microservicios/showtime-service
+      dockerfile: Dockerfile
+    container_name: showtime-service
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:password@mongo2:27017/showtimes?authSource=admin
+      SPRING_DATA_MONGODB_DATABASE: showtimes
+      SERVER_PORT: 8080
+      MOVIE_SERVICE_URL: http://movie-service-go:8080
+    networks:
+      - movie-network
+    depends_on:
+      mongo2:
+        condition: service_healthy
+      movie-service-go:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.showtime-service.rule=PathPrefix(`/api/showtimes`) || PathPrefix(`/api/halls`)"
+      - "traefik.http.services.showtime-service.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  # Reservation Service (Java)
+  reservation-service:
+    build:
+      context: ./backend/Microservicios/reservation-service
+      dockerfile: Dockerfile
+    container_name: reservation-service
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:password@mongo3:27017/reservations?authSource=admin
+      SPRING_DATA_MONGODB_DATABASE: reservations
+      SERVER_PORT: 8080
+      SHOWTIME_SERVICE_URL: http://showtime-service:8080
+      USER_SERVICE_URL: http://user-service-go:8081
+    networks:
+      - movie-network
+    depends_on:
+      mongo3:
+        condition: service_healthy
+      showtime-service:
+        condition: service_healthy
+      user-service-go:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.reservation-service.rule=PathPrefix(`/api/reservations`)"
+      - "traefik.http.services.reservation-service.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      timeout: 10s
+      retries: 5
+
+  ######################## API GATEWAY ########################
+
+  # Traefik API Gateway
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.filename=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backend/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - movie-network
+    depends_on:
+      - user-service-go
+      - movie-service-go
+      - showtime-service
+      - reservation-service
+
+volumes:
+  mysql_data:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+
+networks:
+  movie-network:
+    driver: bridge 
