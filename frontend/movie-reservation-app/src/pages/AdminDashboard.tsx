@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useMovieStore } from '../store/movieStore';
 import { useAdminStore } from '../store/adminStore';
+import { useNotifications } from '../store/uiStore';
 
 interface MovieFormData {
   title: string;
@@ -57,6 +58,7 @@ export function AdminDashboard() {
     deleteShowtime,
     getDefaultPriceByHall
   } = useAdminStore();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
   const [activeTab, setActiveTab] = useState<TabType>('movies');
   const [isMovieModalOpen, setIsMovieModalOpen] = useState(false);

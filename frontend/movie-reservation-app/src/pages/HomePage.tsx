@@ -1,57 +1,11 @@
-import React, { useEffect } from 'react';
-import { Search, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import { Search } from 'lucide-react';
 import { useMovieStore } from '../store/movieStore';
+import { MovieCard } from '../components/MovieCard';
 import type { Movie } from '../types';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-
-interface MovieCardProps {
-  movie: Movie;
-  onSelect: (movie: Movie) => void;
-}
-
-function MovieCard({ movie, onSelect }: MovieCardProps) {
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-      <div className="relative">
-        <img
-          src={movie.posterImage}
-          alt={movie.title}
-          className="w-full h-96 object-cover"
-          onError={(e) => {
-            e.currentTarget.src = '/placeholder-movie.svg';
-          }}
-        />
-        <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-          {movie.rating}
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{movie.title}</h3>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-2">{movie.description}</p>
-        
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-          <span className="flex items-center">
-            <Clock className="h-4 w-4 mr-1" />
-            {movie.duration} min
-          </span>
-          <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded">
-            {movie.genre}
-          </span>
-        </div>
-        
-        <Button 
-          className="w-full" 
-          onClick={() => onSelect(movie)}
-        >
-          Ver Detalles
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -62,30 +16,57 @@ export function HomePage() {
     fetchMovies();
   }, [fetchMovies]);
 
-  // Recargar películas cuando cambien los filtros
-  useEffect(() => {
-    fetchMovies();
-  }, [filters, fetchMovies]);
+  // Memoizar géneros únicos para evitar recálculos innecesarios
+  const genres = useMemo(() => {
+    return Array.from(new Set(movies.map(movie => movie.genre)));
+  }, [movies]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Memoizar películas filtradas
+  const filteredMovies = useMemo(() => {
+    let filtered = movies;
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(movie => 
+        movie.title.toLowerCase().includes(searchLower) ||
+        movie.description.toLowerCase().includes(searchLower) ||
+        movie.genre.toLowerCase().includes(searchLower) ||
+        movie.director?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filters.genre) {
+      filtered = filtered.filter(movie => movie.genre === filters.genre);
+    }
+
+    return filtered;
+  }, [movies, filters.search, filters.genre]);
+
+  // Callbacks memoizados para evitar re-renders innecesarios
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value;
     setFilters({ search: searchTerm });
-  };
+  }, [setFilters]);
 
-  const handleGenreFilter = (genre: string) => {
+  const handleGenreFilter = useCallback((genre: string) => {
     if (filters.genre === genre) {
       setFilters({ genre: undefined });
     } else {
       setFilters({ genre });
     }
-  };
+  }, [filters.genre, setFilters]);
 
-  const handleMovieSelect = (movie: Movie) => {
+  const handleMovieSelect = useCallback((movie: Movie) => {
     navigate(`/movie/${movie.id}`);
-  };
+  }, [navigate]);
 
-  // Obtener géneros únicos de las películas cargadas
-  const genres = Array.from(new Set(movies.map(movie => movie.genre)));
+  const handleImageError = useCallback((movieId: string) => {
+    console.warn(`Failed to load image for movie ${movieId}`);
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({});
+  }, [setFilters]);
 
   if (isLoading) {
     return (
@@ -153,26 +134,31 @@ export function HomePage() {
 
       {/* Movies Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {movies.length > 0 ? (
-          movies.map(movie => (
+        {filteredMovies.length > 0 ? (
+          filteredMovies.map(movie => (
             <MovieCard
               key={movie.id}
               movie={movie}
-              onSelect={handleMovieSelect}
+              onImageError={handleImageError}
             />
           ))
         ) : (
           <div className="col-span-full text-center py-12">
-            <p className="text-gray-500 text-lg">No se encontraron películas</p>
-            {filters.search || filters.genre ? (
+            <p className="text-gray-500 text-lg">
+              {filters.search || filters.genre 
+                ? 'No se encontraron películas que coincidan con tu búsqueda' 
+                : 'No hay películas disponibles'
+              }
+            </p>
+            {(filters.search || filters.genre) && (
               <Button 
                 variant="ghost" 
-                onClick={() => setFilters({})}
+                onClick={clearFilters}
                 className="mt-4"
               >
                 Limpiar filtros
               </Button>
-            ) : null}
+            )}
           </div>
         )}
       </div>

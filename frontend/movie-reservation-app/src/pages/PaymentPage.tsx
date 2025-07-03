@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Lock, Calendar, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, Calendar, User, CheckCircle, Clock, MapPin } from 'lucide-react';
 import type { Movie, Showtime, Seat, PaymentData } from '../types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useReservationStore } from '../store/reservationStore';
 import { useAuthStore } from '../store/authStore';
+import { useNotifications } from '../store/uiStore';
 
 interface ReservationData {
   movie: Movie;
@@ -35,6 +36,7 @@ export function PaymentPage() {
     calculateTotalPrice
   } = useReservationStore();
   const { user } = useAuthStore();
+  const { showNotification } = useNotifications();
   
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
   const [formData, setFormData] = useState<PaymentForm>({
@@ -304,7 +306,7 @@ export function PaymentPage() {
 
     } catch (error) {
       console.error('❌ Error processing payment:', error);
-      alert(`Error al procesar el pago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      showNotification('Error al procesar el pago', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -386,6 +388,7 @@ export function PaymentPage() {
       throw new Error('Payment failed');
     } catch (error) {
       console.error('💥 Error en reserva manual:', error);
+      showNotification('Error en la reserva manual', 'error');
       throw error;
     }
   };
