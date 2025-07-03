@@ -6,6 +6,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { useAuthStore } from '../store/authStore';
+import { useNotifications } from '../store/uiStore';
 import { Mail, Lock, User } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -36,7 +37,8 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultTab);
-  const { login, register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { login, register: registerUser, isLoading, clearError } = useAuthStore();
+  const { notifyLoginSuccess, notifyAuthError, notifySuccess, notifyError } = useNotifications();
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -48,22 +50,46 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 
   const handleLogin = async (data: LoginForm) => {
     try {
-      await login(data);
-      onClose();
-      loginForm.reset();
+      const result = await login(data);
+      if (result?.user) {
+        notifyLoginSuccess(result.user.username);
+        onClose();
+        loginForm.reset();
+      }
     } catch (error) {
-      // Error ya manejado en el store
+      if (error instanceof Error) {
+        if (error.message.includes('credenciales') || error.message.includes('inválido')) {
+          notifyAuthError();
+        } else {
+          notifyError(error.message);
+        }
+      } else {
+        notifyAuthError();
+      }
     }
   };
 
   const handleRegister = async (data: RegisterForm) => {
     try {
       const { confirmPassword, ...registerData } = data;
-      await registerUser(registerData);
-      onClose();
-      registerForm.reset();
+      const result = await registerUser(registerData);
+      if (result?.user) {
+        notifySuccess(`¡Bienvenido ${result.user.username}!`, 'Tu cuenta se ha creado exitosamente');
+        onClose();
+        registerForm.reset();
+      }
     } catch (error) {
-      // Error ya manejado en el store
+      if (error instanceof Error) {
+        if (error.message.includes('existe') || error.message.includes('duplicado')) {
+          notifyError('Error de registro', 'El usuario o email ya existe');
+        } else if (error.message.includes('email')) {
+          notifyError('Email inválido', 'Por favor verifica el formato del email');
+        } else {
+          notifyError(error.message);
+        }
+      } else {
+        notifyError('Error al crear cuenta', 'Ocurrió un error inesperado');
+      }
     }
   };
 
@@ -106,13 +132,6 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
             Registrarse
           </button>
         </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
-            {error}
-          </div>
-        )}
 
         {/* Login Form */}
         {activeTab === 'login' && (
@@ -199,7 +218,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
           </form>
         )}
 
-        {/* Demo Notice */}
+        {/* Testing Credentials */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <div className="text-blue-800 text-sm">
             <strong className="block mb-2">🔑 Usuarios de Prueba Disponibles:</strong>
@@ -214,7 +233,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               </div>
             </div>
             <p className="text-xs mt-2 text-blue-600">
-              El usuario <strong>admin</strong> tiene acceso al panel de administración.
+              💡 Usa estas credenciales para probar el sistema
             </p>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { User, Edit3, Save, X, Ticket, Clock, MapPin, Calendar, CreditCard } fro
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { useNotifications } from '../store/uiStore';
 
 interface Reservation {
   id: string;
@@ -20,8 +21,10 @@ interface Reservation {
 export function ProfilePage() {
   const [searchParams] = useSearchParams();
   const { user, updateUser } = useAuthStore();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   
   // Form data for editing profile
@@ -84,29 +87,94 @@ export function ProfilePage() {
     }));
   };
 
-  const handleSaveProfile = () => {
-    // Aquí se haría la llamada a la API para actualizar el perfil
-    updateUser({
-      ...user!,
-      ...formData
-    });
-    setIsEditing(false);
+  const validateForm = () => {
+    const errors: string[] = [];
+
+    if (formData.firstName.trim().length < 2) {
+      errors.push('El nombre debe tener al menos 2 caracteres');
+    }
+
+    if (formData.lastName.trim().length < 2) {
+      errors.push('El apellido debe tener al menos 2 caracteres');
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.push('El email no tiene un formato válido');
+    }
+
+    if (formData.phone && !/^[\+]?[0-9\s\-\(\)]{10,}$/.test(formData.phone)) {
+      errors.push('El teléfono no tiene un formato válido');
+    }
+
+    if (formData.birthDate) {
+      const birthDate = new Date(formData.birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      
+      if (age < 13) {
+        errors.push('Debes tener al menos 13 años');
+      } else if (age > 120) {
+        errors.push('Fecha de nacimiento inválida');
+      }
+    }
+
+    return errors;
+  };
+
+  const handleSaveProfile = async () => {
+    const validationErrors = validateForm();
+    
+    if (validationErrors.length > 0) {
+      validationErrors.forEach(error => notifyError(error));
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Simular llamada a la API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const updatedUserData = {
+        ...user!,
+        ...formData,
+        preferences: {
+          ...user?.preferences,
+          ...formData.preferences
+        }
+      };
+
+      // Actualizar en el store
+      await updateUser(updatedUserData);
+      
+      setIsEditing(false);
+      notifySuccess('Perfil actualizado correctamente', 'Tus cambios han sido guardados');
+      
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      notifyError('Error al actualizar el perfil', 'Inténtalo de nuevo más tarde');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancelEdit = () => {
-    setFormData({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      birthDate: user?.birthDate || '',
-      preferences: {
-        favoriteGenres: user?.preferences?.favoriteGenres || [],
-        notifications: user?.preferences?.notifications ?? true,
-        language: user?.preferences?.language || 'es'
-      }
-    });
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        birthDate: user.birthDate || '',
+        preferences: {
+          favoriteGenres: user.preferences?.favoriteGenres || [],
+          notifications: user.preferences?.notifications ?? true,
+          language: user.preferences?.language || 'es'
+        }
+      });
+    }
     setIsEditing(false);
+    notifyWarning('Edición cancelada', 'Los cambios no han sido guardados');
   };
 
   const getStatusColor = (status: string) => {
@@ -134,6 +202,16 @@ export function ProfilePage() {
       minimumFractionDigits: 0
     }).format(price);
   };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p className="text-gray-600">Debes estar autenticado para ver tu perfil</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -182,11 +260,21 @@ export function ProfilePage() {
               </Button>
             ) : (
               <div className="flex space-x-2">
-                <Button onClick={handleSaveProfile} className="flex items-center space-x-2 bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={handleSaveProfile} 
+                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                >
                   <Save className="h-4 w-4" />
-                  <span>Guardar</span>
+                  <span>{isSubmitting ? 'Guardando...' : 'Guardar'}</span>
                 </Button>
-                <Button onClick={handleCancelEdit} variant="ghost" className="flex items-center space-x-2">
+                <Button 
+                  onClick={handleCancelEdit} 
+                  variant="ghost" 
+                  className="flex items-center space-x-2"
+                  disabled={isSubmitting}
+                >
                   <X className="h-4 w-4" />
                   <span>Cancelar</span>
                 </Button>
@@ -200,30 +288,36 @@ export function ProfilePage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Datos Básicos</h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
                 {isEditing ? (
                   <Input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     placeholder="Tu nombre"
+                    required
                   />
                 ) : (
-                  <p className="text-gray-900">{user?.firstName || 'No especificado'}</p>
+                  <p className="text-gray-900">{user.firstName || 'No especificado'}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Apellido <span className="text-red-500">*</span>
+                </label>
                 {isEditing ? (
                   <Input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     placeholder="Tu apellido"
+                    required
                   />
                 ) : (
-                  <p className="text-gray-900">{user?.lastName || 'No especificado'}</p>
+                  <p className="text-gray-900">{user.lastName || 'No especificado'}</p>
                 )}
               </div>
 
@@ -237,7 +331,7 @@ export function ProfilePage() {
                     placeholder="tu@email.com"
                   />
                 ) : (
-                  <p className="text-gray-900">{user?.email}</p>
+                  <p className="text-gray-900">{user.email}</p>
                 )}
               </div>
 
@@ -251,7 +345,7 @@ export function ProfilePage() {
                     placeholder="+57 300 123 4567"
                   />
                 ) : (
-                  <p className="text-gray-900">{user?.phone || 'No especificado'}</p>
+                  <p className="text-gray-900">{user.phone || 'No especificado'}</p>
                 )}
               </div>
 
@@ -262,9 +356,12 @@ export function ProfilePage() {
                     type="date"
                     value={formData.birthDate}
                     onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
                   />
                 ) : (
-                  <p className="text-gray-900">{user?.birthDate || 'No especificado'}</p>
+                  <p className="text-gray-900">
+                    {user.birthDate ? new Date(user.birthDate).toLocaleDateString('es-ES') : 'No especificado'}
+                  </p>
                 )}
               </div>
             </div>
@@ -274,7 +371,7 @@ export function ProfilePage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Preferencias</h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notificaciones</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notificaciones</label>
                 {isEditing ? (
                   <label className="flex items-center">
                     <input
@@ -287,7 +384,7 @@ export function ProfilePage() {
                   </label>
                 ) : (
                   <p className="text-gray-900">
-                    {user?.preferences?.notifications ? 'Activadas' : 'Desactivadas'}
+                    {user.preferences?.notifications ? '✅ Activadas' : '❌ Desactivadas'}
                   </p>
                 )}
               </div>
@@ -300,12 +397,12 @@ export function ProfilePage() {
                     onChange={(e) => handlePreferenceChange('language', e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
                   >
-                    <option value="es">Español</option>
-                    <option value="en">English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="en">🇺🇸 English</option>
                   </select>
                 ) : (
                   <p className="text-gray-900">
-                    {user?.preferences?.language === 'es' ? 'Español' : 'English'}
+                    {user.preferences?.language === 'es' ? '🇪🇸 Español' : '🇺🇸 English'}
                   </p>
                 )}
               </div>
@@ -326,15 +423,12 @@ export function ProfilePage() {
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-2">Información de la Cuenta</h4>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Usuario:</strong> {user?.username}
-                </p>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Miembro desde:</strong> Enero 2024
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Reservas realizadas:</strong> {reservations.length}
-                </p>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><strong>Usuario:</strong> {user.username}</p>
+                  <p><strong>Tipo de cuenta:</strong> {user.roles?.[0]?.name === 'ROLE_ADMIN' ? '👑 Administrador' : '👤 Usuario'}</p>
+                  <p><strong>Reservas realizadas:</strong> {reservations.length}</p>
+                  <p><strong>Estado:</strong> <span className="text-green-600 font-medium">✅ Activa</span></p>
+                </div>
               </div>
             </div>
           </div>
@@ -397,18 +491,17 @@ export function ProfilePage() {
                       </div>
                     </div>
                     
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                      <p className="text-xs text-gray-500">
-                        Reservado el {new Date(reservation.bookingDate).toLocaleDateString('es-ES')}
-                      </p>
-                      {reservation.status === 'confirmed' && (
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
-                            Cancelar
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    {reservation.status === 'confirmed' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                        <Button
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => notifyWarning('Función no disponible', 'La cancelación de reservas estará disponible próximamente')}
+                        >
+                          Cancelar Reserva
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
