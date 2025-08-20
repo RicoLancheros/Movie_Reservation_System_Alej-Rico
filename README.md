@@ -1,33 +1,50 @@
-# 🎬 Movie Reservation System - CineReserva
+# Movie Reservation System - CineReserva (☞ﾟヮﾟ)☞
 
-Sistema completo de reservación de cine con **arquitectura híbrida de microservicios** (Go + Java) y frontend React moderno.
+URL: https://github.com/RicoLancheros/Movie_Reservation_System_Alej-Rico
 
-## 🏗️ **Arquitectura del Sistema**
+Sistema de reservación de cine con arquitectura de microservicios híbrida (Go + Java) y frontend React.
 
-### **Backend Híbrido (Docker)**
-- **🐹 Servicios Go**: user-service-go (8081), movie-service-go (8083)
-- **☕ Servicios Java**: showtime-service (8084), reservation-service (8082)  
-- **🗄️ Bases de datos**: MySQL (3307), 3x MongoDB (27018-27020)
-- **🌐 API Gateway**: Traefik (80/8080)
+## Tecnologías Implementadas
 
-### **Frontend React (Local)**
-- **⚛️ React + TypeScript**: Desarrollo local en puerto 5174
-- **⚡ Vite**: Build tool ultrarrápido con hot reload
-- **🎨 Tailwind CSS**: Diseño moderno y responsivo
-- **📦 Zustand**: State management eficiente
+### Backend
+- **Go 1.21**: Servicios de autenticación y catálogo (Gin Framework, MongoDB Driver, BCrypt)
+- **Java 17**: Servicios de horarios y reservas (Spring Boot, Spring Data MongoDB)
+- **Docker**: Containerización de servicios
+- **Traefik**: API Gateway y Load Balancer
+- **MySQL**: Base de datos relacional (puerto 3307)
+- **MongoDB**: Bases de datos NoSQL (puertos 27018-27020)
 
-## 🚀 **Inicio Rápido**
+### Frontend
+- **React 18** con TypeScript
+- **Vite**: Build tool
+- **Tailwind CSS**: Framework de estilos
+- **Zustand**: State management
+- **React Hook Form** y **Zod**: Manejo y validación de formularios
 
-### **1. Iniciar Backend**
+## Despliegue del Aplicativo
+
+### Prerequisitos
+- Docker y Docker Compose instalados
+- Node.js 16+ y npm instalados
+- Puertos disponibles: 80, 5174, 8080-8084, 3307, 27018-27020
+
+### Paso 1: Clonar el Repositorio
+```bash
+git clone [URL_DEL_REPOSITORIO]
+cd Movie_Reservation_System_Alej-Rico
+```
+
+### Paso 2: Iniciar Backend
 ```bash
 # Windows
 start-backend.bat
 
-# Linux/Mac  
+# Linux/Mac
+chmod +x start-backend.sh
 ./start-backend.sh
 ```
 
-### **2. Iniciar Frontend** 
+### Paso 3: Iniciar Frontend
 ```bash
 # Windows
 start-frontend.bat
@@ -38,154 +55,148 @@ npm install
 npm run dev
 ```
 
-### **3. Acceder al Sistema**
-- **Frontend**: http://localhost:5174
+### Paso 4: Verificar el Despliegue
+- **Aplicación Web**: http://localhost:5174
 - **API Gateway**: http://localhost:80
 - **Traefik Dashboard**: http://localhost:8080
 
-## 📋 **Scripts Disponibles**
+## Arquitectura del Sistema
 
-### **Backend**
-- `start-backend.bat/.sh` - Inicia todos los servicios backend
-- `stop.bat/.sh` - Detiene todos los servicios
-- `docker-compose logs [servicio]` - Ver logs específicos
+### Microservicios
 
-### **Frontend**
-- `start-frontend.bat` - Inicia frontend local (Windows)
-- `npm run dev` - Comando directo de desarrollo
-- `npm run build` - Construir para producción
+| Servicio | Puerto | Tecnología | Función |
+|----------|--------|------------|---------|
+| user-service-go | 8081 | Go + Gin | Autenticación y gestión de usuarios |
+| movie-service-go | 8083 | Go + Gin | Catálogo de películas |
+| showtime-service | 8084 | Java + Spring | Gestión de horarios |
+| reservation-service | 8082 | Java + Spring | Sistema de reservas |
 
-## 🔧 **Servicios y Puertos**
+### Bases de Datos
+- **MySQL** (puerto 3307): Datos relacionales
+- **MongoDB** (puertos 27018-27020): Datos no relacionales distribuidos
 
-| Servicio | Puerto | URL | Tecnología | Estado |
-|----------|--------|-----|------------|--------|
-| Frontend | 5174 | http://localhost:5174 | React + Vite | 🟢 Local |
-| User Service | 8081 | http://localhost:8081 | **Go + Gin** | 🐳 Docker |
-| Movie Service | 8083 | http://localhost:8083 | **Go + Gin** | 🐳 Docker |
-| Showtime Service | 8084 | http://localhost:8084 | Java + Spring | 🐳 Docker |  
-| Reservation Service | 8082 | http://localhost:8082 | Java + Spring | 🐳 Docker |
-| MySQL | 3307 | localhost:3307 | Database | 🐳 Docker |
-| MongoDB 1 | 27018 | localhost:27018 | Database | 🐳 Docker |
-| MongoDB 2 | 27019 | localhost:27019 | Database | 🐳 Docker |
-| MongoDB 3 | 27020 | localhost:27020 | Database | 🐳 Docker |
-| Traefik | 80/8080 | http://localhost:80 | API Gateway | 🐳 Docker |
+## Estructura del Proyecto
 
-## 🧪 **Pruebas de API**
-
-### **User Service (Go)**
-```bash
-# Obtener usuarios
-curl http://localhost:8081/api/users
-
-# Login  
-curl -X POST http://localhost:8081/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password"}'
-```
-
-### **Movie Service (Go)**
-```bash
-# Obtener películas
-curl http://localhost:8083/api/movies
-
-# Crear película
-curl -X POST http://localhost:8083/api/movies \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Nueva Película","description":"Descripción","genre":"Acción","duration":120}'
-```
-
-## 🔑 **Credenciales por Defecto**
-
-### **Usuarios del Sistema**
-- **Admin**: `admin` / `password`
-- **Usuario**: `user` / `password`
-
-### **Bases de Datos**
-- **MySQL**: `movieuser` / `moviepass`
-- **MongoDB**: `admin` / `password`
-
-## 🛠️ **Stack Tecnológico**
-
-### **Backend**
-- **🐹 Go 1.21**: Servicios de alta performance
-  - **Gin Framework**: Web framework minimalista
-  - **MongoDB Driver**: Base de datos NoSQL
-  - **BCrypt**: Hashing de contraseñas
-  - **CORS**: Configuración cross-origin
-- **☕ Java 17**: Servicios empresariales
-  - **Spring Boot**: Framework robusto
-  - **Spring Data MongoDB**: ORM NoSQL
-  - **Validation**: Validación de datos
-
-### **Frontend**
-- **⚛️ React 18**: UI Library moderna
-- **📘 TypeScript**: Tipado estático
-- **⚡ Vite**: Build tool ultrarrápido
-- **🎨 Tailwind CSS**: Utility-first CSS
-- **📦 Zustand**: State management ligero
-- **🏗️ React Hook Form**: Manejo de formularios
-- **✅ Zod**: Validación de esquemas
-
-### **Infrastructure**
-- **🐳 Docker**: Containerización
-- **🌐 Traefik**: API Gateway y Load Balancer
-- **🗄️ MongoDB**: Base de datos NoSQL
-- **🗄️ MySQL**: Base de datos relacional
-
-## 🏗️ **Estructura del Proyecto**
 ```
 Movie_Reservation_System_Alej-Rico/
 ├── backend/
 │   ├── Microservicios/
-│   │   ├── user-service-go/      # 🐹 Go - Autenticación
-│   │   ├── movie-service-go/     # 🐹 Go - Catálogo
-│   │   ├── showtime-service/     # ☕ Java - Horarios  
-│   │   └── reservation-service/  # ☕ Java - Reservas
-│   └── traefik/                  # 🌐 API Gateway
+│   │   ├── user-service-go/
+│   │   ├── movie-service-go/
+│   │   ├── showtime-service/
+│   │   └── reservation-service/
+│   └── traefik/
 ├── frontend/
-│   └── movie-reservation-app/    # ⚛️ React + Vite
-├── docker-compose.yml            # Backend services
-├── start-backend.bat/.sh         # Scripts de inicio
-└── start-frontend.bat           # Script frontend
+│   └── movie-reservation-app/
+├── docker-compose.yml
+├── start-backend.bat/.sh
+└── start-frontend.bat
 ```
 
-## 🎯 **Características Principales**
+## Credenciales por Defecto
 
-### **✅ Sistema Completo**
-- **🔐 Autenticación JWT** (Go)
-- **🎬 Catálogo de Películas** (Go + MongoDB)
-- **⏰ Gestión de Horarios** (Java + MongoDB)  
-- **🪑 Sistema de Reservas Avanzado** (Java + MongoDB)
-- **📱 Frontend Responsivo** (React + TypeScript)
-- **🌐 API Gateway** (Traefik)
+### Usuarios del Sistema
+- Admin: `admin` / `password`
+- Usuario: `user` / `password`
 
-### **🚀 Mejoras Implementadas**
-- **⚡ Hot Reload** para desarrollo máximo
-- **🖼️ Imágenes Placeholder** locales (sin dependencias externas)
-- **🌍 CORS configurado** para todos los servicios
-- **💚 Health Checks** automáticos
-- **🔄 Sistema Global de Reservas** - asientos persistentes entre usuarios
-- **🎨 UI/UX Moderno** con Tailwind CSS
-- **📊 Panel de Administración** funcional
-- **🪑 Sincronización de Asientos** en tiempo real
+### Bases de Datos
+- MySQL: `movieuser` / `moviepass`
+- MongoDB: `admin` / `password`
 
-### **🔧 Desarrollo**
+## API Endpoints Principales
 
-1. **Backend**: Modificar servicios en `/backend/Microservicios/`
-2. **Frontend**: Desarrollar en `/frontend/movie-reservation-app/src/`
-3. **Rebuild**: `docker-compose build [servicio]` solo para backend
-4. **Hot Reload**: Frontend se actualiza automáticamente
+### User Service
+```bash
+GET  /api/users                 # Obtener usuarios
+POST /api/auth/login           # Autenticación
+POST /api/auth/register        # Registro de usuarios
+```
 
-## 🐛 **Solución de Problemas**
+### Movie Service
+```bash
+GET  /api/movies               # Listar películas
+POST /api/movies               # Crear película
+GET  /api/movies/{id}          # Obtener película específica
+PUT  /api/movies/{id}          # Actualizar película
+DELETE /api/movies/{id}        # Eliminar película
+```
 
-### **Backend no inicia**
+### Showtime Service
+```bash
+GET  /api/showtimes            # Listar horarios
+POST /api/showtimes            # Crear horario
+GET  /api/showtimes/movie/{id} # Horarios por película
+```
+
+### Reservation Service
+```bash
+GET  /api/reservations         # Listar reservas
+POST /api/reservations         # Crear reserva
+GET  /api/reservations/{id}    # Obtener reserva específica
+```
+
+## Configuración de Desarrollo
+
+### Backend
+1. Los servicios Go se encuentran en `/backend/Microservicios/[servicio]-go/`
+2. Los servicios Java están en `/backend/Microservicios/[servicio]/`
+3. Para reconstruir un servicio específico:
+   ```bash
+   docker-compose build [nombre-servicio]
+   docker-compose up -d [nombre-servicio]
+   ```
+
+### Frontend
+1. El código fuente está en `/frontend/movie-reservation-app/src/`
+2. El servidor de desarrollo incluye hot reload automático
+3. Para producción:
+   ```bash
+   npm run build
+   ```
+
+## Comandos Útiles
+
+### Gestión de Servicios
+```bash
+# Detener todos los servicios
+docker-compose down
+
+# Ver logs de un servicio específico
+docker-compose logs -f [nombre-servicio]
+
+# Reiniciar un servicio
+docker-compose restart [nombre-servicio]
+
+# Limpiar contenedores y volúmenes
+docker-compose down -v
+docker system prune -f
+```
+
+### Desarrollo Frontend
+```bash
+# Instalar dependencias
+npm install
+
+# Servidor de desarrollo
+npm run dev
+
+# Build de producción
+npm run build
+
+# Preview de producción
+npm run preview
+```
+
+## Solución de Problemas
+
+### El backend no inicia correctamente
 ```bash
 docker-compose down -v
 docker system prune -f
 docker-compose up -d --build
 ```
 
-### **Frontend con errores**
+### Errores en el frontend
 ```bash
 cd frontend/movie-reservation-app
 rm -rf node_modules package-lock.json
@@ -193,34 +204,28 @@ npm install
 npm run dev
 ```
 
-### **Problemas de red/CORS**
-```bash
-# Verificar servicios
-docker-compose ps
+### Problemas de conectividad entre servicios
+1. Verificar que todos los servicios estén ejecutándose: `docker-compose ps`
+2. Revisar logs del servicio afectado: `docker-compose logs [servicio]`
+3. Verificar configuración de CORS en los servicios backend
 
-# Ver logs específicos
-docker-compose logs [nombre-servicio]
+## Características Principales
 
-# Reiniciar servicio específico
-docker-compose restart [nombre-servicio]
-```
+- Sistema de autenticación JWT
+- Catálogo de películas con gestión completa CRUD
+- Sistema de horarios y funciones
+- Reserva de asientos con sincronización en tiempo real
+- Panel de administración
+- API Gateway con balanceo de carga
+- Health checks automáticos para todos los servicios
 
-## 📚 **Documentación Adicional**
+## Requisitos del Sistema
 
-- **API Docs**: http://localhost:8080 (Traefik Dashboard)
-- **Logs**: `docker-compose logs -f`
-- **Monitoreo**: Todos los servicios tienen health checks
-- **Testing**: Frontend con Jest + Testing Library
+- Docker Desktop 4.0+
+- Node.js 16+
+- 4GB RAM mínimo
+- 10GB espacio en disco disponible
 
-## 🌟 **Próximas Características**
+## Autores
 
-- **🔔 Notificaciones Push** 
-- **💳 Gateway de Pago Real**
-- **📧 Confirmaciones por Email**
-- **📱 App Mobile** (React Native)
-- **🤖 Chatbot de Soporte**
-
----
-
-**Desarrollado por Alej & Rico** 🚀  
-*Arquitectura híbrida Go + Java para máxima performance y escalabilidad*
+Alejandro Rico Lancheros Dev <3
