@@ -1,6 +1,6 @@
 # Movie Reservation System - CineReserva (☞ﾟヮﾟ)☞
 
-URL: https://github.com/RicoLancheros/Movie_Reservation_System_Alej-Rico
+Roadmap URL proyect: https://roadmap.sh/projects/movie-reservation-system <3
 
 Sistema de reservación de cine con arquitectura de microservicios híbrida (Go + Java) y frontend React.
 
